@@ -1,0 +1,88 @@
+# MeasMockD Complete Data Schema Mapping
+# This file maps logical clinical concepts to physical Excel tables and columns.
+
+tables:
+  # Member Demographics
+  member:
+    name: "PSA_MEMBER_IN"
+    pk: "MEM_NBR"
+    fields:
+      dob: "MEM_DOB"
+      gender: "MEM_GENDER"
+      death_date: "DECEASED_DT"
+      first_name: "MEM_FNAME"
+      last_name: "MEM_LNAME"
+      middle_name: "MEM_MNAME"
+      addr1: "MEM_ADDR1"
+      city: "MEM_CITY"
+      state: "MEM_STATE"
+      zip: "MEM_ZIP"
+      ssn: "MEM_SSN"
+      hic: "HIC_NUMBER"
+      mbi: "MBI_NUMBER"
+
+  # Enrollment & Benefits
+  enrollment:
+    name: "PSA_ENROLLMENT_IN"
+    pk: "MEM_NBR"
+    fields:
+      start_date: "ENR_START"
+      end_date: "ENR_END"
+      benefit_medical: "BEN_MEDICAL"
+      benefit_rx: "BEN_RX"
+
+  # Medical Claims / Visits
+  visit:
+    name: "PSA_VISIT_IN"
+    pk: "CLAIM_ID"
+    fk: "MEM_NBR"
+    fields:
+      date: "SERV_DT"
+      pos: "POS"
+      provider_npi: "BILLING_PROV_NPI"
+      # Grouped Code Fields for easier engine searching
+      procedure_codes: ["CPT_1", "CPT_2", "HCPCS_1", "HCPCS_2"]
+      diagnosis_codes: ["DIAG_I_1", "DIAG_I_2", "DIAG_I_3", "DIAG_I_4", "DIAG_I_5"] # Can expand if needed
+  
+  # Clinical Observations (EMR)
+  emr:
+    name: "PSA_EMR_IN"
+    pk: "EMR_RECORD_NUMBER"
+    fk: "MEM_NBR"
+    fields:
+      date: "SERV_DT"
+      bmi_percentile: "BMI_PERCENTILE"
+      bmi_value: "BMI"
+      height: "HT"
+      weight: "WT"
+      loinc: "LOINC"
+      snomed: ["SNOMED_1", "SNOMED_2"]
+      result_value: "RESULT"
+
+  # Monthly Membership Flags (Hospice, LIS)
+  monthly_membership:
+    name: "PSA_MONTHLY_MBR_IN"
+    fk: "MEM_NBR"
+    fields:
+      run_date: "RUN_DT"
+      hospice_flag: "HOSPICE"
+
+  # Pharmacy Claims
+  pharmacy:
+    name: "PSA_RX_IN"
+    fk: "MEM_NBR"
+    fields:
+      date: "RX_SERV_DT"
+      ndc: "RX_NDC"
+      days_supply: "RX_DAYS_SUPP"
+      quantity: "QTY_DISP"
+
+  # Laboratory Results
+  lab:
+    name: "PSA_LAB_IN"
+    fk: "MEM_NBR"
+    fields:
+      date: "LAB_SCR_DT"
+      loinc: "LOINC"
+      cpt: "LAB_CPT"
+      value: "LAB_VALUE"

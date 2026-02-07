@@ -1,0 +1,270 @@
+import pandas as pd
+import re
+
+class TestCaseParser:
+    def __init__(self, file_path, extractor=None):
+        self.file_path = file_path
+        self.extractor = extractor
+        
+    def parse_scenarios(self, measure_config):
+        xl = pd.ExcelFile(self.file_path)
+        all_scenarios = []
+        measure_abbr = measure_config.get('measure_name', '').lower()
+        
+        # Sheets to exclude
+        exclude_sheets = ['Revision_History', 'DST', 'Fileid_Summary', 'Fileid_Detail']
+
+        for sheet_name in xl.sheet_names:
+            if sheet_name in exclude_sheets:
+                continue
+            
+            print(f"  Parsing sheet: {sheet_name}")
+            df_raw = xl.parse(sheet_name, header=None)
+            header_row_idx = -1
+            
+            for i, row in df_raw.iterrows():
+                row_str = " ".join([str(cell).lower() for cell in row])
+                if any(x in row_str for x in ['#tc', 'mem_nbr', 'member number', 'testcase id']):
+                    header_row_idx = i
+                    break
+            
+            if header_row_idx == -1:
+                continue
+
+            df = xl.parse(sheet_name, skiprows=header_row_idx)
+            df.columns = [str(c).strip() for c in df.columns]
+            
+            id_cols = [c for c in df.columns if any(x in c.lower() for x in ['#tc', 'id', 'mem_nbr', 'member number'])]
+            if not id_cols:
+                id_cols = [c for c in df.columns if '#' in c or 's.n' in c.lower()]
+            
+            col_map = {
+                'id': id_cols[0] if id_cols else df.columns[0],
+                'scenario': next((c for c in df.columns if 'scenario' in c.lower() or 'test objective' in c.lower()), None),
+                'objective': next((c for c in df.columns if 'objective' in c.lower()), None),
+                'expected': next((c for c in df.columns if 'expected' in c.lower()), None),
+                'period': next((c for c in df.columns if 'period' in c.lower() or 'enr_period' in c.lower()), None)
+            }
+
+            current_sc = None
+            for _, row in df.iterrows():
+                tc_id_raw = str(row.get(col_map['id'], '')).strip()
+                
+                is_continuation = False
+                if tc_id_raw.lower() in ["nan", "none", "", "#", "#tc", "mem_nbr", "s.n"]:
+                    if current_sc:
+                        is_continuation = True
+                    else:
+                        continue
+                
+                if not is_continuation:
+                    if len(tc_id_raw) > 60: continue
+                    if any(x in tc_id_raw.lower() for x in ["verify if", "member has", "objective:"]): continue
+                    
+                    scenario_text = str(row.get(col_map['scenario'], '')) if col_map['scenario'] else ""
+                    objective_text = str(row.get(col_map['objective'], '')) if col_map['objective'] else ""
+                    search_blob = (tc_id_raw + " " + scenario_text + " " + objective_text).lower()
+                    if measure_abbr not in search_blob and "all" not in search_blob and "psa" not in sheet_name.lower():
+                        continue
+                        
+                    current_sc = {
+                        "id": tc_id_raw,
+                        "scenario": scenario_text,
+                        "objective": objective_text,
+                        "expected": str(row.get(col_map['expected'], '')) if col_map['expected'] else "",
+                        "sheet": sheet_name,
+                        "age": 70, 
+                        "gender": 'M',
+                        "compliant": [],
+                        "excluded": [],
+                        "product_line": "Medicare",
+                        "enrollment_spans": [],
+                        "visit_spans": [],
+                        "overrides": {}
+                    }
+                    all_scenarios.append(current_sc)
+
+                self._parse_row_details(current_sc, row, col_map, sheet_name, measure_config)
+
+        return all_scenarios
+
+    def _parse_row_details(self, parsed_sc, row, col_map, sheet_name, measure_config):
+        numerator_comps = measure_config['rules']['clinical_events']['numerator_components']
+        exclusion_comps = measure_config['rules'].get('exclusions', [])
+        
+        # Combine all columns into lines to scan for data
+        row_values = [str(val) for val in row.values if pd.notna(val)]
+        blob_full = " ".join(row_values).lower()
+
+        # 1. Product Line
+        pl_aliases = {
+            "Commercial": ["commercial", "comm"],
+            "Medicaid": ["medicaid", "medi-cal", "mcd"],
+            "Medicare": ["medicare", "mcr"],
+            "Exchange": ["exchange", "marketplace", "qhp", "hix"]
+        }
+        for pl_name, aliases in pl_aliases.items():
+            if any(alias in blob_full for alias in aliases):
+                parsed_sc["product_line"] = pl_name
+                break
+
+        # 2. Age Detection
+        if parsed_sc.get("age") == 70:
+            age_match = re.search(r'(\d+)\s*(?:-|to)\s*(\d+)', blob_full)
+            if age_match:
+                low, high = map(int, age_match.groups())
+                temp_age = (low + high) // 2
+                if 0 <= temp_age <= 110: parsed_sc["age"] = temp_age
+            else:
+                matches = re.findall(r'(\d+)', blob_full)
+                for m in matches:
+                    val = int(m)
+                    if 18 <= val <= 100:
+                        parsed_sc["age"] = val
+                        break
+        
+        # 3. Compliance & Exclusions
+        for comp in numerator_comps:
+            kw = comp['name'].lower()
+            if kw in blob_full:
+                if comp['name'] not in parsed_sc["compliant"]:
+                    parsed_sc["compliant"].append(comp['name'])
+        
+        for excl in exclusion_comps:
+            if excl['name'].lower() in blob_full:
+                if excl['name'] not in parsed_sc["excluded"]:
+                    parsed_sc["excluded"].append(excl['name'])
+        
+        # 3.5 Specific Field Overrides (Field=1, Field=0, No Field)
+        # Look for patterns like BEN_MH_INP=0 or HOSPICE=1
+        field_matches = re.findall(r'(\b[a-zA-Z0-9_]+\b)\s*[:=]\s*([01])', blob_full)
+        for field, val in field_matches:
+            parsed_sc["overrides"][field.upper()] = int(val)
+            
+        # Look for "No [Benefit]" or "Doesn't have [Benefit]"
+        no_patterns = [
+            (r'no\s+(ben_[a-z_]+)', 0),
+            (r'no\s+mental\s+health', 0, 'BEN_MH_INP'),
+            (r'no\s+pharmacy', 0, 'BEN_RX'),
+            (r'no\s+medical', 0, 'BEN_MEDICAL'),
+            (r'hospice\s*[:=]\s*1', 1, 'HOSPICE'),
+            (r'hospice\s*[:=]\s*0', 0, 'HOSPICE'),
+        ]
+        
+        for entry in no_patterns:
+            pattern = entry[0]
+            val = entry[1]
+            match = re.search(pattern, blob_full)
+            if match:
+                if len(entry) > 2:
+                    parsed_sc["overrides"][entry[2]] = val
+                else:
+                    parsed_sc["overrides"][match.group(1).upper()] = val
+
+        # 4. Dates & Ranges
+        date_part = r'\d{1,4}[-/.\s]\d{1,2}[-/.\s](?:MY(?:[\-\+]\d+)?|\d{2,4})'
+        date_part_full = rf'(?:{date_part}|MY(?:[\-\+]\d+)?)'
+        range_regex = rf'({date_part_full})\s*(?:-|to|until|—)\s*({date_part_full})'
+        
+        in_enr_section = False
+        for cell_val in row_values:
+            cell_str = str(cell_val).strip()
+            if not cell_str: continue
+            
+            l_norm = cell_str.lower()
+            if any(kw in l_norm for kw in ["enrollment", "enr", "member", "ce:"]):
+                in_enr_section = True
+            
+            # Find Ranges (Enrollment)
+            for match in re.finditer(range_regex, cell_str, re.IGNORECASE):
+                start_str, end_str = match.groups()
+                start_pos = match.end()
+                
+                # Search for attributes AFTER this date range but BEFORE the next one
+                # We'll peek ahead to see where the next range starts
+                next_match = re.search(range_regex, cell_str[start_pos:], re.IGNORECASE)
+                end_pos = start_pos + next_match.start() if next_match else len(cell_str)
+                context_str = cell_str[match.start():end_pos]
+                
+                prod_regex = r'(?:product_?id|rollup_?id|prod_?id|pl_?id|product|rollup|prod|pl)\s*[:=]?\s*(\w+)'
+                prod_match = re.search(prod_regex, context_str, re.IGNORECASE)
+                
+                # Fallback to whole cell, then whole row
+                if not prod_match: prod_match = re.search(prod_regex, cell_str, re.IGNORECASE)
+                if not prod_match:
+                    for other_val in row_values:
+                        pm = re.search(prod_regex, str(other_val), re.IGNORECASE)
+                        if pm: 
+                            prod_match = pm
+                            break
+                
+                prod_val = prod_match.group(1) if prod_match else None
+                
+                cov_regex = r'(?:coverage_indicator|coverage_ind|coverage|cover|cov)\s*[:=]\s*(\w+)'
+                cov_match = re.search(cov_regex, context_str, re.IGNORECASE)
+                if not cov_match: cov_match = re.search(cov_regex, cell_str, re.IGNORECASE)
+                cov_val = cov_match.group(1) if cov_match else None
+                
+                ben_hospice_match = re.search(r'ben[-_]hospice\s*[:=]\s*(\w+)', context_str, re.IGNORECASE)
+                if not ben_hospice_match: ben_hospice_match = re.search(r'ben[-_]hospice\s*[:=]\s*(\w+)', cell_str, re.IGNORECASE)
+                ben_hospice_val = ben_hospice_match.group(1) if ben_hospice_match else None
+
+                span_data = {
+                    'start': start_str, 
+                    'end': end_str, 
+                    'product_id': prod_val
+                }
+                if cov_val: span_data['coverage_indicator'] = cov_val
+                if ben_hospice_val:
+                    val = 1 if ben_hospice_val.upper() in ['Y', '1', 'YES', 'P'] else 0
+                    span_data['BEN_HOSPICE'] = val
+
+                parsed_sc["enrollment_spans"].append(span_data)
+
+            # Find Single Dates (Visits)
+            if any(kw in l_norm for kw in ["visit", "encounter", "checkup"]):
+                dates = re.findall(date_part_full, cell_str, re.IGNORECASE)
+                for d in dates:
+                    # Avoid duplicates with enrollment
+                    if not any(d in [s['start'], s['end']] for s in parsed_sc["enrollment_spans"]):
+                        parsed_sc["visit_spans"].append({
+                            'date': d,
+                            'type': 'Outpatient' 
+                        })
+
+        # --- AI Fallback Logic ---
+        # If regex failed to find any enrollment spans, try the AI extractor
+        if not parsed_sc["enrollment_spans"] and self.extractor:
+            print(f"    ⚠️  No enrollment spans found for {parsed_sc['id']}. Triggering AI Extractor...")
+            
+            # Prepare row dict for AI
+            ai_input = {
+                'id': parsed_sc['id'],
+                'scenario': parsed_sc['scenario'],
+                'objective': parsed_sc['objective'],
+                'expected': parsed_sc['expected'],
+                'sheet': sheet_name
+            }
+            
+            ai_result = self.extractor.extract_scenario_info(ai_input)
+            
+            if not ai_result.get('_ai_failed'):
+                # Merge AI results
+                if ai_result.get('enrollment_spans'):
+                    print(f"      ✅ AI found {len(ai_result['enrollment_spans'])} spans.")
+                    parsed_sc["enrollment_spans"].extend(ai_result['enrollment_spans'])
+                
+                if ai_result.get('product_line'):
+                    parsed_sc["product_line"] = ai_result['product_line']
+                    
+                # Merge expected results into overrides if present
+                if ai_result.get('expected_results'):
+                    for k, v in ai_result['expected_results'].items():
+                        parsed_sc["overrides"][k.upper()] = v
+                        
+                # Merge exclusions found by AI
+                for excl in ai_result.get('exclusions', []):
+                    if excl not in parsed_sc["excluded"]:
+                        parsed_sc["excluded"].append(excl)
+            else:
+                print(f"      ❌ AI extraction also failed: {ai_result.get('_error')}")

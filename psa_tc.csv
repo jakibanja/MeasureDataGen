@@ -1,0 +1,1199 @@
+Unnamed: 0,Unnamed: 1,Unnamed: 2,Unnamed: 3,Unnamed: 4,Unnamed: 5,Unnamed: 6,Unnamed: 7,Unnamed: 8,Unnamed: 9,Unnamed: 10,Unnamed: 11
+#  member number/TestCase ID,Scenario,Test Objective,ADD/UPDATE,Expected Result,Actual Result,Status - Oracle,Status - SQL,DLL Version,Executed By,Executed Date,Comments
+,PL,,,,,,,,,,
+PSA_PL_COMMERCIAL,"Verify, if a member belongs to Commercial",,,PL=0,,Not Tested,Not Tested,,,,
+PSA_PL_MEDICAID,"Verify, if a member belongs to Medicaid",,,PL=0,,Not Tested,Not Tested,,,,
+PSA_PL_MEDICARE,"Verify, if a member belongs to Medicare",,,PL=1,,Not Tested,Not Tested,,,,
+PSA_PL_EXCHANGE,"Verify, if a member belongs to Exchange",,Member name update,PL=0,,Not Tested,Not Tested,,,,
+,AG,,,,,,,,,,
+PSA_AG_01,"Verify, if a member is (male) 70 years as of December 31 of the measurement year.",,,"AG=1
+AGE_END_REP_YR=70, Gender=M",,Not Tested,Not Tested,,,,
+PSA_AG_02,"Verify, if a member is (male) 100 years as of December 31 of the measurement year.",,,"AG=1
+AGE_END_REP_YR=100, Gender=M",,Not Tested,Not Tested,,,,
+PSA_AG_03,"Verify, if a member is (male) 69 years as of December 31 of the measurement year.",,,"AG=0
+AGE_END_REP_YR=69, Gender=M",,Not Tested,Not Tested,,,,
+PSA_AG_04,"Verify, if a member is (male) 70 years as of Jan 1st of the measurement year.",,,"AG=1
+AGE_END_REP_YR=70, Gender=M",,Not Tested,Not Tested,,,,
+PSA_AG_05,"Verify, if a member is (Female) 70 years as of December 31 of the measurement year.",,,"AG=0
+AGE_END_REP_YR=70, Gender=F",,Not Tested,Not Tested,,,,
+PSA_AG_06,"Verify, if a member is (other) 70 years as of December 31 of the measurement year.",,,"AG=0
+AGE_END_REP_YR=70, Gender=O",,Not Tested,Not Tested,,,,
+,CE & Gap,,,,,,,,,,
+PSA_CE_01,"Verify, if a member is enrolled in the measurement year. No gaps
+CE:
+1/1/MY-1 TO 12/31/MY",,,CE=1,,Not Tested,Not Tested,,,,
+PSA_CE_02,"Verify, if a member is enrolled in the measurement year. 44 days
+CE:
+1/1/MY-1 TO 10/1/MY
+11/14/MY TO 12/31/MY",,,CE=1,,Not Tested,Not Tested,,,,
+PSA_CE_03,"Verify, if a member is enrolled in the measurement year. Exact 45 days
+CE:
+1/1/MY-1 TO 10/1/MY
+11/15/MY TO 12/31/MY",,,CE=1,,Not Tested,Not Tested,,,,
+PSA_CE_04,"Verify, if a member is enrolled in the measurement year. Two gaps of 20 days
+CE:
+1/1/MY-1 TO 10/1/MY
+10/21/MY TO 11/1/MY
+11/21/MY TO 12/31/MY",,,CE=0,,Not Tested,Not Tested,,,,
+PSA_CE_05,"Verify, if a member is enrolled in the measurement year - 46 days
+CE:
+1/1/MY-1 TO 9/30/MY
+11/16/MY TO 12/31/MY",,,CE=0,,Not Tested,Not Tested,,,,
+CE Misc,Enrollment Span,,,,,,,,,,
+PSA_ENR_SPAN_01,"CE :The measurement year 
+AD : December 31 of the measurement year
+BE : Medical 
+
+Verify enrollment span and AD=1 for following
+1st Enrollment : 1/1/MY-1 - 12/31/2050 --prod id 11
+2nd Enrollment : 3/1/MY - 12/31/2050 --prod id 11","In this case, engine was picking the enrollment span start date as 3/1/MY which will not satisfy AD, but since member is continusly enrolled CE and BE(medical benefit) will be 1.",,"AD=1, CE=1 and BE=1, product id 11",,Not Tested,Not Tested,,,,
+PSA_ENR_SPAN_02,"CE :The measurement year 
+AD : December 31 of the measurement year
+BE : Medical 
+
+Verify enrollment span and AD=1 for following
+1st Enrollment : 1/1/MY-1 - 12/31/2050 --prod id 2
+2nd Enrollment : 3/1/MY - 12/31/2050 --prod id 92","In this case, engine was picking the enrollment span start date as 3/1/MY which will not satisfy AD, but since member is continusly enrolled CE and BE(medical benefit) will be 1.",,"AD=1, CE=1 and BE=1, product id 2
+AD=1, CE=0 and BE=0, product id 92",,Not Tested,Not Tested,,,,
+,AD,,,,,,,,,,
+PSA_AD_01,"Verify, if a member is enrolled on December 31 of the measurement year.
+CE:
+1/1/MY TO 12/31/MY",,,AD=1,,Not Tested,Not Tested,,,,
+PSA_AD_02,"Verify, if a member is not enrolled on December 31 of the measurement year.
+CE:
+1/1/MY TO 12/30/MY",,,AD=0,,Not Tested,Not Tested,,,,
+PSA_AD_03,"Verify, if a member is enrolled on December 31 of the measurement year.
+CE:
+1/1/MY TO 12/30/MY- Ben_Medical='Y'
+12/31/MY TO 12/31/MY- Ben_Medical='N'",,,"AD=0, BE=1, CE=1",,Not Tested,Not Tested,,,,
+,BE,,,,,,,,,,
+PSA_BE_01,"Verify, if a member has medical only as benefit . 
+CE:
+1/1/MY-1 TO 12/31/MY",,,BE=1 and CE=1,,Not Tested,Not Tested,,,,
+PSA_BE_02,"Verify if member has no medical benefit but is continuosly enrolled. CE=1
+CE:
+1/1/MY-1 TO 12/31/MY - Ben_Medical='N'",,,"BE=0, AD=0",,Not Tested,Not Tested,,,,
+PSA_BE_03,"Verify if member has benefit but is not continuosly enrolled. CE=0
+CE:
+1/1/MY-1 TO 9/30/MY- BEN_MEDICAL='Y'",,,"BE=0, CE=0",,Not Tested,Not Tested,,,,
+,ED=1,,,,,,,,,,
+,RE,,,,,,,,,,
+,Required Exclusions Ben_Hospic,,,,,,,,,,
+,From Enrollment,,,,,,,,,,
+PSA_RE_BH_ENROLL_01,"Verify If a member has below enrollment_spans and ben_hospice:
+1/1/MY-1 to 12/31/MY-1 - Ben-Hospice=N
+1/1/MY - 1/1/MY - Ben-Hospice=Y
+1/2/MY - 12/31/MY+1 - Ben-Hospice=N",Hospice on 1/1/MY,,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_BH_ENROLL_02,"Verify If a member has below enrollment_spans and ben_hospice:
+1/1/MY-1 to 12/30/MY - Ben-Hospice=N
+12/31/MY - 12/31/MY - Ben-Hospice=Y
+1/1/MY+1 - 12/31/MY+1 - Ben-Hospice=N",Hospice on 12/31/MY,,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_BH_ENROLL_03,"Verify If a member has below enrollment_spans and ben_hospice:
+1/1/MY-1 to 12/31/MY-1 - Ben-Hospice=Y
+1/1/MY - 12/31/MY - Ben-Hospice=N
+1/1/MY+1 - 12/31/MY+1 - Ben-Hospice=Y","Hospice on MY-1
+Hospice on MY+1",,"For Commercial, Medicaid,Medicare and Exchange
+Hospice_Excl=0, RE=0, Exclusion_dt=Null,",,Not Tested,Not Tested,,,,
+PSA_RE_BH_ENROLL_04,"Verify If member has below enrollment_spans and ben_hospice:
+1/1/MY - 12/31/MY - Ben-Hospice=Y for Plan=1
+1/1/MY - 12/31/MY - Ben-Hospice=N for Plan=2
+--Numerator compliant","Hospice from Plan 1 only.
+FileID Specific",,"For Commercial, Medicaid, Medicare and Exchange
+Hospice_Excl=1, RE=1 for Plan=1, NE=1
+Hospice_Excl=0, RE=0 for Plan=2, NE=1
+
+Fileid:
+Plan 1= RE
+Plan 2= Numerator",,Not Tested,Not Tested,,,,
+PSA_RE_BH_ENROLL_05,"Verify If a member has below enrollment_spans and ben_hospice:
+1/1/MY-1 - 12/31/MY - Ben-Hospice=N for Product_ID=3, coverage_ind=PR
+1/1/MY-1 - 12/31/MY - Ben-Hospice=Y for Product_ID=2, coverage_ind=SN",Hospice information from Secondary non-reportable (SN) enrollment,,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null for Plan=1
+Hospice_Excl=0, RE=0, Exclusion_dt=Null for Plan=2",,Not Tested,Not Tested,,,,
+,From MMDF,,,,,,,,,,
+PSA_RE_BH_MMDF_01,"Verify If a member has 
+Hospice flag as Y in Monthly_mbr_in file with Rundate=1/1/MY",From MMDF file with rundate during MY,,"For Commercial, Medicaid,Medicare and Exchange
+HOSPICE_EXCL=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_BH_MMDF_02,"Verify If a member has 
+Hospice flag as Y in Monthly_mbr_in file with Rundate=12/31/MY",From MMDF file with rundate during MY,,"For Commercial, Medicaid,Medicare and Exchange
+HOSPICE_EXCL=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_BH_MMDF_03,"Verify If a member has
+Hospice=Y in Monthly_mbr_in file with Rundate=12/31/MY-1
+Hospice=N in Monthly_mbr_in file with Rundate=1/1/MY
+Hospice=N in Monthly_mbr_in file with Rundate=7/1/MY
+Hospice=N in Monthly_mbr_in file with Rundate=12/31/MY
+Hospice=Y in Monthly_mbr_in file with Rundate=1/1/MY+1",From MMDF file with rundate during MY-1 and MY+1,,"For Commercial, Medicaid,Medicare and Exchange
+Hospice_Excl=0, RE=0, Exclusion_dt=Null,",,Not Tested,Not Tested,,,,
+PSA_RE_BH_MMDF_04,"Verify If a member has
+Hospice=Y in Monthly_mbr_in file with Rundate=7/1/MY
+Hospice=N in Monthly_mbr_in file with Rundate=7/1/MY",Multiple value on same date during MY,,"For Commercial, Medicaid,Medicare and Exchange
+HOSPICE_EXCL=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_BH_MMDF_05,"Verify If member has
+Hospice=N in Monthly_mbr_in file with Rundate=1/1/MY
+Hospice=Y in Monthly_mbr_in file with Rundate=7/1/MY
+Hospice=Y in Monthly_mbr_in file with Rundate=8/1/MY --20000
+Hospice=Y in Monthly_mbr_in file with Rundate=8/1/MY --20001
+Hospice=N in Monthly_mbr_in file with Rundate=12/31/MY","Different value during MY
+Max(Serv_Dt) Should be Picked.",,"For Commercial, Medicaid,Medicare and Exchange
+HOSPICE_EXCL=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_BH_MMDF_06,"Verify If member has
+Plan 1 Enrollment: 1/1/MY-1 to 12/31/MY 
+Plan 2 Enrollment: 1/1/MY-1 to 12/31/MY
+Hospice=Y in Monthly_mbr_in file with Rundate=7/1/MY for Plan=2
+Hospice=N in Monthly_mbr_in file with Rundate=8/1/MY for Plan=1
+--Numerator Compliant","Hospice from Plan 2 only
+FileID Specific",,"For Commercial, Medicaid, Medicare and Exchange
+Hospice_Excl=1, RE=1 for Plan=2, NE=1
+Hospice_Excl=0, RE=0 for Plan=1, NE=1
+Fileid:
+Plan 1= Numerator
+Plan 2= RE",,Not Tested,Not Tested,,,,
+,Hospice intervention value set,,,,,,,,,,
+PSA_RE_HIVS_01,"Verify If member has
+--Enrolllment for Plan1 and Plan2
+Hospice intervention value set: 1/1/MY","Hospice value set: 1/1/MY
+Numerator Compliant",,"For all valid product line and Plan
+Hospice_Excl=1, RE=1, NE1=1 ",,Not Tested,Not Tested,,,,
+PSA_RE_HIVS_02,"Verify If a member has
+Hospice intervention value set (183919006 : SNOMED): 12/31/MY",Hospice value set: 12/31/MY,,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HIVS_03,"Verify,if for Commercial, Medicaid and Medicare member has
+Hospice intervention value set: 12/31/MY-1 
+Hospice intervention value set : 1/1/MY+1","Hospice value set: 12/31/MY-1
+Hospice value set: 1/1/MY+1",,"For all valid product lines
+Hospice_Excl=0, RE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HIVS_04,"Verify If a member has
+Hospice intervention value set: 7/1/MY -- Suppl",Suppl Test,,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HIVS_05,"Verify If a member has 
+Hospice intervention value set: 7/1/MY -- Denied",All numerator compliant + Denied Claim Test,,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HIVS_06,"Verify If a member has
+Hospice intervention value set with POS 81 (Lab Claim Test): 1/1/MY",Lab Claim Test,,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HIVS_07,"Verify If a member has
+Inpatiant Stay Value Set with Hospice intervention value set: 
+serv_dt= 12/31/MY-1, admit_dt= 12/31/MY-1 and disch_dt= 1/10/MY","Admit and serv_dt on MY-1 but discharge date on MY.
+Serv_dt should be used.",,"For all valid product lines
+Hospice_Excl=0, RE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HIVS_08,"Verify If a member has
+Inpatiant Stay Value Set with Hospice intervention value set: 
+serv_dt= 1/1/MY, admit_dt= 12/31/MY-1 and disch_dt= 1/10/MY","Admit on MY-1 but serv_dt and discharge date on MY.
+Serv_dt should be used.",,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HIVS_09,"Verify If a member has
+Inpatiant Stay Value Set with Hospice intervention value set: 
+serv_dt= 1/1/MY, admit_dt= 12/31/MY-1 and disch_dt= 1/1/MY+1","Admit on MY-1 but serv_dt on MY and discharge date on MY+1
+Serv_dt should be used.
+",,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+,Hospice Encounter value set,,,,,,,,,,
+PSA_RE_HEVS_01,"Verify If member has
+--Enrolllment for Plan1 and Plan2
+Hospice Encounter value set: 1/1/MY","Hospice value set: 1/1/MY
+Numerator Compliant",,"For all Valid product line and Plan
+Hospice_Excl=1, RE=1, NE1=1",,Not Tested,Not Tested,,,,
+PSA_RE_HEVS_02,"Verify If a member has
+Hospice Encounter value set (170935008 : SNOMED): 12/31/MY",Hospice value set: 12/31/MY,,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HEVS_03,"Verify,if for Commercial, Medicaid and Medicare member has
+Hospice Encounter value set: 12/31/MY-1 
+Hospice Encounter value set : 1/1/MY+1","Hospice value set: 12/31/MY-1
+Hospice value set: 1/1/MY+1",,"For all valid product lines
+Hospice_Excl=0, RE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HEVS_04,"Verify If a member has
+Hospice Encounter value set: 7/1/MY -- Suppl",Suppl Test,,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HEVS_05,"Verify If a member has 
+Hospice Encounter value set: 7/1/MY -- Denied",All numerator compliant + Denied Claim Test,,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HEVS_06,"Verify If a member has
+Hospice Encounter value set with POS 81 (Lab Claim Test): 1/1/MY",Lab Claim Test,,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HEVS_07,"Verify If a member has
+Inpatiant Stay Value Set with Hospice Encounter value set: 
+serv_dt= 12/31/MY-1, admit_dt= 12/31/MY-1 and disch_dt= 1/10/MY","Admit and serv_dt on MY-1 but discharge date on MY.
+Serv_dt should be used.",,"For all valid product lines
+Hospice_Excl=0, RE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HEVS_08,"Verify If a member has
+Inpatiant Stay Value Set with Hospice Encounter value set: 
+serv_dt= 1/1/MY, admit_dt= 12/31/MY-1 and disch_dt= 1/10/MY","Admit on MY-1 but serv_dt and discharge date on MY.
+Serv_dt should be used.",,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_HEVS_09,"Verify If a member has
+Inpatiant Stay Value Set with Hospice Encounter value set: 
+serv_dt= 1/1/MY, admit_dt= 12/31/MY-1 and disch_dt= 1/1/MY+1","Admit on MY-1 but serv_dt on MY and discharge date on MY+1
+Serv_dt should be used.",,"For all valid product lines
+Hospice_Excl=1, RE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+,Members who died any time during the measurement year(Deceased_Excl),,,,,,,,,,
+,Member_in Table,,,,,,,,,,
+PSA_RE_MEMBER_DECEASED_01,"Verify 
+DECEASED_DT=1/1/MY from member_in
+--Full numerator Compliant Event.","Num complaint
+deceased in 1/1/MY from member_in",,"For all valid product lines,
+Deceased_Excl=1, RE=1, NE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_MEMBER_DECEASED_02,"Verify
+DECEASED_DT=1/1/MY from member_in.","Num not complaint
+deceased in 1/1/MY from member_in",,"For all valid product lines,
+Deceased_Excl=1, RE=1, NE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_MEMBER_DECEASED_03,"Verify
+DECEASED_DT=12/31/MY from member_in.","Num not complaint
+deceased in 12/31/MY from member_in",,"For all valid product lines,
+Deceased_Excl=1, RE=1, NE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_MEMBER_DECEASED_04,"Verify
+DECEASED_DT=1/1/MY+1 from member_in.","Num not complaint
+deceased in 1/1/MY+1 from member_in",,"For all valid product lines,
+Deceased_Excl=0, RE=0, NE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_MEMBER_DECEASED_05,"Verify
+DECEASED_DT=12/31/MY-1 from member_in.","Num not complaint
+deceased in 12/31/MY-1 from member_in",,"For all valid product lines,
+Deceased_Excl=0, RE=0, NE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+,Visit_in Table,,,,,,,,,,
+PSA_RE_CLAIM_DECEASED_01,"Verify
+DISCH_STATUS: 20 on 1/1/MY --(Primary, Visit_in, 90055, ECDS:4)
+--Full numerator Compliant Event.","Num complaint
+deceased in 1/1/MY",,"For all valid product lines,
+Deceased_Excl=1, RE=1, SNE=1, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_02,"Verify
+DISCH_STATUS: 41 on 1/1/MY --(Primary, Visit_in, 90055, ECDS:4)","Num not complaint
+deceased in 1/1/MY",,"For all valid product lines,
+Deceased_Excl=1, RE=1, NE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_03,"Verify
+DISCH_STATUS: 42 on 12/31/MY --(Primary, Visit_in, 90055, ECDS:4)","Num not complaint
+deceased in 12/31/MY",,"For all valid product lines,
+Deceased_Excl=1, RE=1, NE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_04,"Verify
+DISCH_STATUS: 20 on 12/31/MY-1 (primary source)
+DISCH_STATUS: 40 on 12/31/MY-1 (primary source)
+DISCH_STATUS: 41 on 12/31/MY-1 (primary source)
+DISCH_STATUS: 42 on 12/31/MY-1 (primary source)
+
+DISCH_STATUS: 44 on 12/31/MY (primary source)
+
+DISCH_STATUS: 20 on 1/1/MY+1 (Suppl source)
+DISCH_STATUS: 40 on 1/1/MY+1 (Suppl source)
+DISCH_STATUS: 41 on 1/1/MY+1 (Suppl source)
+DISCH_STATUS: 42 on 1/1/MY+1 (Suppl source)","Num not complaint
+deceased in 12/31/MY-1 and MY+1.
+Not valid disch_status code during MY.",,"For all valid product lines,
+Deceased_Excl=0, RE=0, NE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_05,"Verify
+DISCH_STATUS: 43 on 7/1/MY --(Suppl, Visit_in, 17955, ECDS:1)",Deceased code from Suppl source,,"For all valid product lines,
+Deceased_Excl=1, RE=1, NE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_06,"Verify
+DISCH_STATUS: 41 on 7/1/MY --(Primary, Visit_in, 90055, ECDS:4)
+--Denied source",Deceased code from Denied Claim,,"For all valid product lines,
+Deceased_Excl=1, RE=1, NE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_07,"Verify
+DISCH_STATUS: 41 with POS81 (Lab Claim) on 7/1/MY 
+--(Primary, Visit_in, 90055, ECDS:4)",Deceased code fromLab Claim using POS 81,,"For all valid product lines,
+Deceased_Excl=1, RE=1, NE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_08,"Verify
+Inpateitn Stay Value Set with DISCH_STATUS: 41:
+Serv_dt: 12/31/MY-1, admit_dt: 12/31/MY-1, disch_dt= 1/10/MY
+--(Primary, Visit_in, 90055, ECDS:4)","admit_dt and Serv_dt on MY-1. Disch_dt on MY
+
+9/18 Team Cross train : 
+Deceased code with Inpatient stay value set, deceased uses discharge date.",,"For all valid product lines,
+Deceased_Excl=1, RE=1, NE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_09,"Verify
+Inpateitn Stay Value Set with DISCH_STATUS: 41:
+Serv_dt: 1/1/MY, admit_dt: 12/31/MY-1, disch_dt= 1/10/MY
+--(Primary, Visit_in, 90055, ECDS:4)","admit_dt on MY-1. Serv_dt on Disch_dt on MY
+Deceased code with Inpatient stay value set, Serv_dt should be considered",,"For all valid product lines,
+Deceased_Excl=1, RE=1, NE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_10,"Verify
+Inpateitn Stay Value Set with DISCH_STATUS: 41:
+Serv_dt: 1/1/MY, admit_dt: 12/31/MY-1, disch_dt= 1/1/MY+1
+--(Primary, Visit_in, 90055, ECDS:4)","admit_dt on MY-1. Serv_dt on Disch_dt on MY
+
+9/18 Team Cross train : 
+Deceased code with Inpatient stay value set, deceased uses discharge date.",,"For all valid product lines,
+Deceased_Excl=0, RE=0, NE=0, Exclusion_dt=Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_11,"Verify Member have
+From EMR_IN, Deceased_dt: 1/1/MY on serv_dt: 1/1/MY","Serv_dt and deceased_dt same during MY
+Deceased exclusion  form EMR_IN file.",Added as per HMY2026 udpate: ,"For All Valid Product Lines,
+Deceased_Excl=1, RE=1, Exclusion_Dt= Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_12,"Verify Member have
+From EMR_IN, Deceased_dt: 12/31/MY on serv_dt: 1/1/MY","Serv_dt and deceased_dt different during MY
+Deceased exclusion  form EMR_IN file.",Added as per HMY2026 udpate: ,"For All Valid Product Lines,
+Deceased_Excl=1, RE=1, Exclusion_Dt= Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_13,"Verify Member have
+From EMR_IN, Deceased_dt: 12/31/MY-1 on serv_dt: 1/1/MY
+From EMR_IN, Deceased_dt: 1/1/MY+1 on serv_dt: 1/1/MY","Serv_dt during MY, but deceased_dt before and after MY.
+Deceased exclusion  form EMR_IN file.",Added as per HMY2026 udpate: ,"For All Valid Product Lines,
+Deceased_Excl=0, RE=0, Exclusion_Dt= Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_14,"Verify Member have
+From EMR_IN, Deceased_dt: 1/1/MY on serv_dt: 12/31/MY-1","Serv_dt before MY, but deceased_dt on MY.
+Deceased exclusion  form EMR_IN file.",Added as per HMY2026 udpate:,"For All Valid Product Lines,
+Deceased_Excl=1, RE=1, Exclusion_Dt= Null",,Not Tested,Not Tested,,,,
+PSA_RE_CLAIM_DECEASED_15,"Verify Member have
+From EMR_IN, Deceased_dt: 1/1/MY on serv_dt: 1/1/MY+1
+","Serv_dt after MY, but deceased_dt on MY.
+Deceased exclusion  form EMR_IN file.",Added as per HMY2026 udpate: ,"For All Valid Product Lines,
+Deceased_Excl=1, RE=1, Exclusion_Dt= Null",,Not Tested,Not Tested,,,,
+,"Men who had a diagnosis or event for which PSA-based testing is
+clinically appropriate. Any of the following meet criteria:",,,,,,,,,,
+,Prostate Cancer and History of Prostate Cancer Value Set (any time during the member’s history through December 31 of the measurement year),,,,,,,,,,
+PSA_RE_PCVS_01,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY-7
+--Using Snomed Code",Prostate Cancer VS on MY-7,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-7",,Not Tested,Not Tested,,,,
+PSA_RE_PCVS_01_01,"Verify, if a member has 
+on member's DOB: 1/1/1950
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY-70
+--Using Snomed Code",Prostate Cancer VS on members DOB,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-70",,Not Tested,Not Tested,,,,
+PSA_RE_PCVS_01_02,"Verify, if a member has 
+on member's DOB: 1/1/1950
+Prostate Cancer and History of Prostate Cancer Value Set: : 12/31/MY-71
+--Using Snomed Code",Prostate Cancer VS on 1 day prior to members DOB,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=NULL",,Not Tested,Not Tested,,,,
+PSA_RE_PCVS_02,"Verify if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set : 1/1/MY-10
+(ICD-10 before Oct 1, 2015)",Prostate Cancer VS on MY-4 using ICD 10 code,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=NULL",,Not Tested,Not Tested,,,,
+PSA_RE_PCVS_03,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 12/31/MY 
+(ICD -10 code)",Prostate Cancer VS on end of MY,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY ",,Not Tested,Not Tested,,,,
+PSA_RE_PCVS_04,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set :1/1/MY
+(ICD -10 code)",Prostate Cancer VS on beg of MY,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY",,Not Tested,Not Tested,,,,
+PSA_RE_PCVS_05,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY+1 ",Prostate Cancer VS on beg of MY+1 ,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PCVS_06,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 12/31/MY Suppl source 
+(ICD -10 code)",Prostate Cancer VS on end of MY from suppl source,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY ",,Not Tested,Not Tested,,,,
+PSA_RE_PCVS_07,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY Suppl source
+(ICD -10 code)",Prostate Cancer VS on beg of MY from suppl source,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY",,Not Tested,Not Tested,,,,
+PSA_RE_PCVS_08,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY+Suppl source",Prostate Cancer VS on beg of MY+1 from suppl source,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_PCVS_GG_LAB_CLAIM_01,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY with POS81
+snomed: 92691004","Pos 81 not allowed
+",,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_PCVS_GG_LAB_CLAIM_01_01,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY with claim type 'LB'","Claim type 'LB' allowed
+",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY",,Not Tested,Not Tested,,,,
+PSA_RE_PCVS_08_01,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY-7 (file_id : 90055, visit_in)-- Primary
+Prostate Cancer and History of Prostate Cancer Value Set: 12/31/MY (file_id : 17955, visit_in)-- Supple","Prostate Cancer VS on MY-7 using ICD 9 code
+Primary>>max_serv_dt>>max_file_id",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-7",,Not Tested,Not Tested,,,,
+PSA_RE_PCVS_08_02,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY-7 (file_id : 90055, visit_in)--Primary
+Prostate Cancer and History of Prostate Cancer Value Set: 12/31/MY (file_id : 18155, emr_in)--Primary","Prostate Cancer VS on MY-7 using ICD 9 code
+Primary>>max_serv_dt>>max_file_id",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY",,Not Tested,Not Tested,,,,
+,Prostate Dysplasia Value Set,,,,,,,,,,
+PSA_RE_PDVS_09,"Verify, if a member has 
+Prostate Dysplasia Value Set: 1/1/MY",Prostate Dysplasia VS on beg of MY,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY
+",,Not Tested,Not Tested,,,,
+PSA_RE_PDVS_10,"Verify, if a member has 
+Prostate Dysplasia Value Set: 12/31/MY",Prostate Dysplasia VS on end of MY,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY
+",,Not Tested,Not Tested,,,,
+PSA_RE_PDVS_11,"Verify, if a member has 
+Prostate Dysplasia Value Se:t 1/1/MY-1",Prostate Dysplasia VS on beg of MY-1,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1
+",,Not Tested,Not Tested,,,,
+PSA_RE_PDVS_12,"Verify, if a member has 
+Prostate Dysplasia Value Set 12/31/MY-1",Prostate Dysplasia VS on end of MY-1,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY-1 
+",,Not Tested,Not Tested,,,,
+PSA_RE_PDVS_13,"Verify, if a member has 
+Prostate Dysplasia Value Set: 12/31/MY-2",Prostate Dysplasia VS on end of MY -2,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null
+",,Not Tested,Not Tested,,,,
+PSA_RE_PDVS_14,"Verify, if a member has 
+Prostate Dysplasia Value Set: 1/1/MY+1",Prostate Dysplasia VS on end of MY +1,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null
+",,Not Tested,Not Tested,,,,
+PSA_RE_PDVS_15,"Verify, if a member has 
+Prostate Dysplasia Value Set: 1/1/MY Suppl source",Prostate Dysplasia VS on beg of MY from supple source,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY
+",,Not Tested,Not Tested,,,,
+PSA_RE_PDVS_16,"Verify, if a member has 
+Prostate Dysplasia Value Set: 1/1/MY-1 Suppl source",Prostate Dysplasia VS on beg of MY-1 from supple source,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1
+",,Not Tested,Not Tested,,,,
+PSA_RE_PDVS_17,"Verify, if a member has 
+Prostate Dysplasia Value Set: 12/31/MY-2 Suppl source",Prostate Dysplasia VS on MY-2 from supple source,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_PDVS_GG_LAB_CLAIM_04,"Verify, if a member has 
+Prostate Dysplasia Value Set: 1/1/MY with POS81
+ICD10: N42.3","POS81 not allowed
+",,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_PDVS_GG_LAB_CLAIM_04_01,"Verify, if a member has 
+Prostate Dysplasia Value Set: 1/1/MY with claim type 'LB'
+ICD10: N42.3","Claim type 'LB' allowed
+",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY",,Not Tested,Not Tested,,,,
+PSA_RE_PDVS_17_01,"Verify, if a member has 
+Prostate Dysplasia Value Set: 1/1/MY-1 (file_id : 90055, visit_in)-- primary
+Prostate Dysplasia Value Set: 12/31/MY (file_id : 17955, visit_in)-- supple","Prostate Dysplasia VS on MY-1 using ICD 9 code
+Primary>>max_serv_dt>>max_file_id",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_PDVS_17_02,"Verify, if a member has 
+Prostate Dysplasia Value Set: 1/1/MY-1 (file_id : 90055, visit_in)-- primary
+Prostate Dysplasia Value Set 12/31/MY (file_id : 18155, emr_in)-- primary","Prostate Dysplasia VS on MY-1 using ICD 9 code
+Primary>>max_serv_dt>>max_file_id",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY",,Not Tested,Not Tested,,,,
+,PSA Test Exclusion Value Set - >4.0 nanograms/milliliter [ng/mL,,,,,,,,,,
+,"NO visit record just LAB_IN record, LOINC",,,,,,,,,,
+PSA_RE_PLTEVS_18,"Verify, if a member has 
+PSA LAB Test Exclusion Value Set:1/1/MY - 1 
+(LOINC) >4 
+using LOINC CODE:2857-1
+LAB_VALUE:4.1",PSA LAB Test Exclusion VS on beg of MY-1 usingg lab value more than 4,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY - 1 ",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_19,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set:12/31/MY - 1 
+(LOINC) >4 
+using LOINC CODE:2857-1
+LAB_VALUE:4.5",PSA LAB Test Exclusion VS on end of MY-1,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY - 1 ",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_20,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY 
+(LOINC) >4 
+using LOINC CODE:2857-1
+LAB_VALUE:4.5",PSA LAB Test Exclusion VS on begining of MY,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_21,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set :12/31/MY-2
+(LOINC) >4 
+using LOINC CODE:2857-1
+LAB_VALUE:4.5",PSA LAB Test Exclusion VS on end of MY-2,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_22,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/ MY - 1 
+(LOINC) >4 
+using LOINC CODE:2857-1
+LAB_VALUE:3.9",PSA LAB Test Exclusion VS on beg of MY-1 having lab value less than 4,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_23,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set:1/1/ MY - 1 
+(LOINC) >4 
+using LOINC CODE:2857-1
+LAB_VALUE : 4",PSA LAB Test Exclusion VS on beg of MY-1 having lab value equal to 4,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_24,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set:1/1/ MY - 1 
+(LOINC) >4 
+using LOINC CODE:2857-1
+LAB_VALUE : NULL",PSA LAB Test Exclusion VS on beg of MY-1 having no lab value,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_25,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set:1/1/ MY - 1 Suppl Source
+(LOINC) >4 
+using LOINC CODE:2857-1
+LAB_VALUE : 4.1",PSA LAB Test Exclusion VS on beg of MY-1 having lab value more than 4 from suppl source,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/ MY - 1",,Not Tested,Not Tested,,,,
+PSA_PLTEVS_GG_LAB_CLAIM_07,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1 with POS81
+CPT:84153","Lab claim allowed
+",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1",,Not Tested,Not Tested,,,,
+PSA_PLTEVS_LAB_07_01,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1 (file_id : 70055, LAB_in)-- primary
+PSA Lab Test Exclusion Value Set 12/31/MY-1 (file_id : 17055, LAB_in)-- supple
+
+(LOINC) >4 
+using LOINC CODE:2857-1
+LAB_VALUE:4.1",PSA LAB Test Exclusion VS on 1/1/MY-1 and 12/31/MY-1,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1 ",,Not Tested,Not Tested,,,,
+PSA_PLTEVS_LAB_07_02,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1 (file_id : 70055, LAB_in)-- primary
+PSA Lab Test Exclusion Value Set: 12/31/MY-1 (file_id : 70000, LAB_in)-- primary
+
+(LOINC) >4 
+using LOINC CODE:2857-1
+LAB_VALUE:4.1","PSA LAB Test Exclusion VS on 1/1/MY-1 and 12/31/MY-1
+
+within primary max serv_dt should be picked",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY-1 ",,Not Tested,Not Tested,,,,
+,"NO visit record just LAB_IN record, CPT",,,,,,,,,,
+PSA_RE_PLTEVS_26,"Verify, if a member has
+PSA Lab Test Exclusion Value Set:1/1/MY - 1 
+(CPT) >4 
+using CPT CODE:84153
+LAB_VALUE:4.1",PSA LAB Test Exclusion VS on beg of MY-1 usingg lab value more than 4,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY - 1 ",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_27,"Verify, if a member has
+PSA Lab Test Exclusion Value Set:12/31/MY - 1 
+(CPT) >4 
+using CPT CODE:84153
+LAB_VALUE:4.5",PSA LAB Test Exclusion VS on end of MY-1,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY - 1 ",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_28,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set:1/1/MY 
+(CPT) >4 
+using CPT CODE:84153
+LAB_VALUE:4.5 ",PSA LAB Test Exclusion VS on beg of MY,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_29,"Verify, if a member has
+PSA Lab Test Exclusion Value Set:12/31/MY-2 
+(CPT) >4 
+using CPT CODE:84153
+LAB_VALUE:4.5 ",PSA LAB Test Exclusion VS on end of MY-2,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_30,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/ MY - 1 
+(CPT) >4 
+using CPT CODE:84153
+LAB_VALUE:3.9",PSA LAB Test Exclusion VS on beg of MY-1 having lab value less than 4,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_31,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set:1/1/ MY - 1 
+(CPT) >4 
+using CPT CODE:84153
+LAB_VALUE : 4",PSA LAB Test Exclusion VS on beg of MY-1 having lab value equal to 4,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_32,"Verify, if a member has P
+PSA Lab Test Exclusion Value Set:1/1/ MY - 1 
+(CPT) >4 
+using CPT CODE:84153
+LAB_VALUE : NULL",PSA LAB Test Exclusion VS on beg of MY-1 having no lab value,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_33,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set:1/1/ MY - 1 Suppl Source
+(CPT) >4 
+using CPT CODE:84153
+LAB_VALUE : 4.5",PSA LAB Test Exclusion VS on beg of MY-1 having lab value more than 4 from suppl source,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/ MY - 1",,Not Tested,Not Tested,,,,
+PSA_PLTEVS_LAB_33_01,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1 (file_id : 70055, LAB_in)-- primary
+PSA Lab Test Exclusion Value Set 12/31/MY-1 (file_id : 17055, LAB_in)-- supple
+ 
+using CPT CODE:84153
+LAB_VALUE:4.1",PSA LAB Test Exclusion VS on 1/1/MY-1 and 12/31/MY-1,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1 ",,Not Tested,Not Tested,,,,
+PSA_PLTEVS_LAB_33_02,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: : 1/1/MY-1 (file_id : 70055, LAB_in)-- primary
+PSA Lab Test Exclusion Value Set: : 12/31/MY-1 (file_id : 70000, LAB_in)-- primary
+
+using CPT CODE:84153
+LAB_VALUE:4.1",PSA LAB Test Exclusion VS on 1/1/MY-1 and 12/31/MY-1,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY-1 ",,Not Tested,Not Tested,,,,
+,NO visit record just EMR_IN with HCPCS,,,,,,,,,,
+PSA_RE_PLTEVS_34,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1 suppl source
+(HCPCS) >4
+Using HCPC Code:G0103
+Result: 4.1",PSA Lab Test Exclusion using HCPC code with 4.5 result on beg of MY-1,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_35,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set:12/31/MY-1 
+(HCPCS) >4
+Using HCPC Code:G0103
+Result: 4.5",PSA Lab Test Exclusion using HCPC code with 4.5 result on end of MY-1,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY-1 ",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_36,"Verify, if a member has
+PSA Lab Test Exclusion Value Set :1/1/MY
+(HCPCS) >4
+Using HCPC Code:G0103
+Result: 4.5",PSA Lab Test Exclusion using HCPC code with 4.5 result on beg of MY,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_37,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set :12/31/MY-2
+(HCPCS) >4
+Using HCPC Code:G0103
+Result: 4.5",PSA Lab Test Exclusion using HCPC code with 4.5 result on end of MY-1,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_38,"Verify, if a member has
+PSA Lab Test Exclusion Value Set:1/1/MY-1 
+(HCPCS) >4
+Using HCPC Code:G0103
+Result: 3.9",PSA Lab Test Exclusion using HCPC code with 4.5 result on end of MY-1,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_39,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set:1/1/MY-1 
+(HCPCS) >4
+Using HCPC Code:G0103
+Result: 4",PSA Lab Test Exclusion using HCPC code with 4 result on beg of MY-1,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_40,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set:1/1/MY-1 
+(HCPCS) >4
+Using HCPC Code:G0103
+Result: NULL",PSA Lab Test Exclusion using HCPC code with no result on beg of MY-1,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_40_01,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1 (file_id : 18155, emr_in)-- primary HCPC Code:G0103 (lab_ind_value : H)
+PSA Lab Test Exclusion Value Set 12/31/MY-1 (file_id : 18055, emr_in)-- supple CPT CODE:84153 (lab_ind_value : C)
+
+LAB_VALUE:4.1",PSA LAB Test Exclusion VS on 1/1/MY-1 and 12/31/MY-1,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1 ",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_40_02,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1 (file_id : 18155, emr_in)-- primary CPT CODE:84153
+PSA Lab Test Exclusion Value Set: 12/31/MY-1 (file_id : 18156, emr_in)-- primary HCPC Code:G0103
+
+using CPT CODE:84153
+LAB_VALUE:4.1",PSA LAB Test Exclusion VS on 1/1/MY-1 and 12/31/MY-1,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY-1 ",,Not Tested,Not Tested,,,,
+,"In MY23 the logic is enforced to look at result_value_indicator as the result could be for any of many code fields.   v  IF x.COLUMN_NAME='RXNORM' THEN
+            vblJOB :=vblJOB || ',CASE WHEN TRIM(EMR_IN.RX_NDC) IS NULL THEN EMR_IN.RX_DAYS_SUPP END QTY ';
+                        ELSIF x.COLUMN_NAME='RX_NDC' THEN
+                        vblJOB :=vblJOB || ', EMR_IN.RX_DAYS_SUPP QTY ';
+            ELSIF x.COLUMN_PREFX='LNC' THEN
+            vblJOB :=vblJOB || ',CASE WHEN RESULT_VALUE_IND=''L'' THEN EMR_IN.RESULT END QTY '; 
+            ELSIF x.COLUMN_PREFX='SMD' THEN
+            vblJOB :=vblJOB || ',CASE WHEN RESULT_VALUE_IND=''S'' THEN EMR_IN.RESULT END QTY ';
+            ELSIF x.COLUMN_PREFX='CPT' THEN
+            vblJOB :=vblJOB || ',CASE WHEN RESULT_VALUE_IND=''C'' THEN EMR_IN.RESULT END QTY ';
+            ELSIF x.COLUMN_PREFX='HCP' THEN
+            vblJOB :=vblJOB || ',CASE WHEN RESULT_VALUE_IND=''H'' THEN EMR_IN.RESULT END QTY ';
+            ELSIF x.COLUMN_PREFX='CII' THEN
+            vblJOB :=vblJOB || ',CASE WHEN RESULT_VALUE_IND=''T'' THEN EMR_IN.RESULT END QTY ';            
+                        ELSE
+                        vblJOB :=vblJOB || ', NULL QTY ';
+                        END IF; is needed to be populated for result field to be considered.",,,,,,,,,,
+,EMR extra scenarios(using RESULT_VALUE_IND column to populate respective indicators,,,,,,,,,,
+PSA_RE_EMR_EXTRA_01,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 12/31/MY-1 primary source
+using CPT CODE:84153 (RESULT_VALUE_IND='C')
+Result: 4.1","Snomed code removed in MY2026, replaced with cpt code in 12/31/MY-1",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY-1 ",,Not Tested,Not Tested,,,,
+PSA_RE_EMR_EXTRA_02,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1 primary source
+using CPT CODE:84153 (RESULT_VALUE_IND='C')
+Result: 4.1",,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1 ",,Not Tested,Not Tested,,,,
+PSA_RE_EMR_EXTRA_03,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1 primary source
+using HCPCS CODE:G0103 (RESULT_VALUE_IND='H')
+Result: 4.1",,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1 ",,Not Tested,Not Tested,,,,
+PSA_RE_EMR_EXTRA_04,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1 primary source
+using LOINC CODE:2857-1 (RESULT_VALUE_IND='L')
+Result: 4.1",,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1 ",,Not Tested,Not Tested,,,,
+PSA_RE_EMR_EXTRA_05,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/10/MY-1 primary source
+using SMD CODE:63476009 (RESULT_VALUE_IND='C')
+Result: 4.1
+
+PSA Lab Test Exclusion Value Set: 1/20/MY-1 primary source
+using CPT CODE:84153 (RESULT_VALUE_IND='H')
+Result: 4.1
+
+PSA Lab Test Exclusion Value Set: 2/1/MY-1 primary source
+using HCPCS CODE:G0103 (RESULT_VALUE_IND='L')
+Result: 4.1
+
+PSA Lab Test Exclusion Value Set: 2/10/MY-1 primary source
+using LOINC CODE:2857-1 (RESULT_VALUE_IND='S')
+Result: 4.1
+------------------------------No indicator and only indicator--------------------------
+PSA Lab Test Exclusion Value Set: 1/10/MY-1 primary source
+using SMD CODE:63476009 (RESULT_VALUE_IND='null') : No indicator
+Result: 4.1
+
+PSA Lab Test Exclusion Value Set: 1/20/MY-1 primary source
+using CPT CODE:84153 (RESULT_VALUE_IND='A') : Invalid indicator
+Result: 4.1
+
+PSA Lab Test Exclusion Value Set: 2/1/MY-1 primary source
+using HCPCS CODE:G0103 (RESULT_VALUE_IND='H') : No Result
+no result
+
+PSA Lab Test Exclusion Value Set: 2/10/MY-1 primary source
+using LOINC CODE: no code (RESULT_VALUE_IND='L') : No code
+Result: 4.1",,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+,Visit record with HCPCS and EMR_IN record,,,,,,,,,,
+PSA_RE_PLTEVS_44,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1(visit_in only)
+(CPT) >4 
+Result:4.5","Visit record with HCPCS code, and EMR_IN with just value",,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_45,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1(visit_in)
+HCPCS>4 
+Result:4.5 from emr_in","Visit record with HCPCS code, and EMR_IN with value and code ",,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_46,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1
+Result:NULL","Visit record with HCPCS code, and no EMR_IN record",,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_46_01,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1-- visit(90055) primary(90055)
+
+(CPT) >4 
+Result:4.5 on 1/1/MY-1 --lab supple (17055)","Visit record with HCPCS code, and result from lab_in
+
+(Result only from lab wont make RE complaint, value set should be there along with result)",,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_46_02,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1-- visit(90055) primary(90055)
+(CPT) <4 
+Result: 3 on 1/1/MY-1 --emr(18155)-- primary
+(CPT) >4 
+Result:4.5 on 1/2/MY-1 --lab primary (70055) -- primary",Result only from lab or emr wont make member RE complaint. ,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=null",,Not Tested,Not Tested,,,,
+,"A PSA test (PSA Lab Test Exclusion Value Set) during the year prior to the measurement year, where laboratory data indicate an elevated result (>4.0 nanograms/milliliter [ng/mL]).",,,,,,,,,,
+,"MY2023 : GG33. Date of Service for Laboratory Tests 
+(Applies GG33) : Organizations may consider all events with dates no more than 7 days apart to be the same test and may use the collected date for reporting. ",,,,,,,,,,
+,"Pick all the dates in the Prior Year.
+Pick the dates that have >4 result. (If the only >4 result is not in the PY, move to next step of prioritization.)
+Pick primary over supplemental.
+Pick latest date.",,,,,,,,,,
+PSA_RE_PLTEVS_LAB_TEST_01,"Verify, if a member has 
+PSA LAB Test Exclusion Value Set:1/1/MY - 1 without lab result value(using LOINC CODE:2857-1)
+
+PSA LAB Test Exclusion Value Set:12/31/MY-2 WITH lab result value(using LOINC CODE:2857-1)
+(LOINC) >4 
+LAB_VALUE:4.1","PSA LAB Test Exclusion VS on:
+1/1/MY-1 without lab result value. 
+12/31/MY-2 with lab result value of 4.1 (> 4)",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY - 1",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_LAB_TEST_01_01,"Verify, if a member has 
+PSA LAB Test Exclusion Value Set: 1/7/MY-1(lab_in) result >4 : 4.5 (supple) 17055
+PSA LAB Test Exclusion Value Set: 1/1/MY-1(lab_in) result <4 : 3 (primary) 70055","Here, value with result 4.5 is picked from supple, among primary data and supple, primary will be picked and its date will be reported",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/7/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_LAB_TEST_02,"Verify, if a member has
+PSA LAB Test Exclusion Value Set:12/31/MY-1 without lab result value(cpt : 84153)- EMR_IN (result_value_ind='H')
+
+PSA LAB Test Exclusion Value Set:1/1/MY WITH lab result value(using LOINC CODE:35741-8)
+(LOINC) >4 
+LAB_VALUE:4.5","PSA LAB Test Exclusion VS on:
+12/31/MY-1 without lab result value. 
+1/1/MY with lab result value of 4.1 (> 4)
+
+Sujith: Even if the emr_in don’t have corresponding lab_result_ind value if the lab result is >4 then it would be taken and RE will be complaint.
+
+MY2026 update : snomed code removed from vsd, replaced with cpt code.",MY2026 Update,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_LAB_TEST_02_01,"Verify, if a member has 
+PSA LAB Test Exclusion Value Set:1/1/MY-1 without lab result value(cpt : 84153)- EMR_IN
+
+PSA LAB Test Exclusion Value Set:12/31/MY-2 WITH lab result value(using LOINC CODE:35741-8)- file id -17055( supple)
+(LOINC) >4 
+LAB_VALUE:4.5
+PSA LAB Test Exclusion Value Set:12/30/MY-2 WITH lab result value(using LOINC CODE:35741-8) file id -70055( Primary)
+(LOINC) >4 
+LAB_VALUE:4.5","PSA LAB Test Exclusion VS on:
+12/31/MY-1 without lab result value. 
+1/1/MY with lab result value of 4.1 (> 4)
+lab test exclusion value set date will be picked
+
+Wil pick max- filed -> max service date as RE compliant date.
+
+MY2026 update : snomed code removed from vsd, replaced with cpt code.",MY2026 Update,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_LAB_TEST_02_02,"Verify, if a member has 
+PSA LAB Test Exclusion Value Set:12/31/MY-1 without lab result value(cpt : 84153)- EMR_IN
+
+PSA LAB Test Exclusion Value Set:1/1/MY WITH lab result value- higher file id -70055( Primary)-- lab_in
+(LOINC) >4 
+LAB_VALUE:4.5
+
+PSA LAB Test Exclusion Value Set:1/2/MY WITH lab result value file did -70001( Primary)-- lab_in
+(LOINC) >4 
+LAB_VALUE:4.5","PSA LAB Test Exclusion VS on:
+12/31/MY-1 without lab result value. 
+1/2/MY with lab result value of 4.1 (> 4)
+lab test exclusion value set date will be picked
+
+For file id
+Wil pick max- filed -> max service date as RE compliant date for file id
+
+MY2026 update : snomed code removed from vsd, replaced with cpt code.",MY2026 Update,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_LAB_TEST_02_03,"Verify, if a member has 
+PSA LAB Test Exclusion Value Set:1/1/MY-1 with lab result value(using cpt : 84153)- EMR_IN (result_value_ind=H)
+Result : 3
+
+PSA LAB Test Exclusion Value Set:12/31/MY-2 WITH lab result value(using LOINC CODE:35741-8)- file id -17055( supple)
+(LOINC) >4 
+LAB_VALUE:4.5
+PSA LAB Test Exclusion Value Set:12/30/MY-2 WITH lab result value(using LOINC CODE:35741-8) file id -70055( Primary)
+(LOINC) >4 
+LAB_VALUE:4.5","Here, since emr have result as 3 which is <4 but it also has >4 value from lab and will look +7 and -7 days and takes the value from lab_in.
+
+Sujith : While taking value from lab_in(if result is positive then, if emr value is <4 and also if the result_value_ind is not valid to the code used RE will be complaint.
+
+MY2026 update : snomed code removed from vsd, replaced with cpt code.",MY2026 Update,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_LAB_TEST_03,"Verify, if a member has 
+PSA LAB Test Exclusion Value Set:12/31/MY-1 WITHOUT lab result value(using LOINC CODE:35741-8)
+PSA LAB Test Exclusion Value Set: 1/7/MY with lab result value(cpt : 84153)- EMR_IN -LAB_VALUE:4.5- SUPPLE SOURCE","PSA LAB Test Exclusion VS on:
+12/31/MY-1 without lab result value. 
+1/8/MY with lab result value of 4.1 (> 4)
+7 Days apart.
+
+MY2026 update : snomed code removed from vsd, replaced with cpt code.",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_LAB_TEST_04,"Verify, if a member has 
+PSA LAB Test Exclusion Value Set:12/31/MY-1 WITHOUT lab result value(using LOINC CODE:35741-8)
+PSA LAB Test Exclusion Value Set: 1/8/MY with lab result value(using CPT CODE:84153)- EMR_IN -LAB_VALUE:4.5","PSA LAB Test Exclusion VS on:
+12/31/MY-1 without lab result value. 
+1/9/MY with lab result value of 4.1 (> 4)
+8 Days apart.",,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=NULL",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_LAB_TEST_05,"Verify, if a member has 
+PSA LAB Test Exclusion Value Set:1/1/MY - 1 without lab result value(using LOINC CODE:2857-1)
+PSA LAB Test Exclusion Value Set:12/25/MY-2 WITH lab result value(using LOINC CODE:2857-1)
+(LOINC) >4 
+LAB_VALUE:4.1","PSA LAB Test Exclusion VS on:
+1/1/MY-1 without lab result value. 
+12/31/MY-2 with lab result value of 4.1 (> 4)
+7 Days apart.",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_PLTEVS_LAB_TEST_06,"Verify, if a member has 
+PSA LAB Test Exclusion Value Set:1/1/MY-1 WITHOUT lab result value(using LOINC CODE:35741-8)
+PSA LAB Test Exclusion Value Set: 12/24/MY-2 with lab result value(cpt : 84153)- EMR_IN -LAB_VALUE:4.5","PSA LAB Test Exclusion VS on:
+1/1/MY-1 without lab result value. 
+12/31/MY-2 with lab result value of 4.1 (> 4)
+8Days apart.
+
+
+MY2026 update : snomed code removed from vsd, replaced with cpt code.",MY2026 Update,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=NULL",,Not Tested,Not Tested,,,,
+,Abnormal PSA Test Result or Finding Value Set ( Only Snomed Codes),,,,,,,,,,
+PSA_RE_APTRFVS_EX01,"Verify, if a member has 
+Abnormal PSA Test Result or Finding Value Set: 1/1/MY-1",Abnormal PSA Test Result or Finding VS on beg of MY-1 ,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_APTRFVS_EX02,"Verify, if a member has 
+Abnormal PSA Test Result or Finding Value Set: 12/31/MY-1",Abnormal PSA Test Result or Finding VS on end of MY-1 ,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_APTRFVS_EX03,"Verify, if a member has 
+Abnormal PSA Test Result or Finding Value Set: 1/1/MY ",Abnormal PSA Test Result or Finding VS on MY,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=NULL
+ ",,Not Tested,Not Tested,,,,
+PSA_RE_APTRFVS_EX04,"Verify, if a member has 
+Abnormal PSA Test Result or Finding Value Set: 12/31/MY ",Abnormal PSA Test Result or Finding VS on MY,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=NULL
+ ",,Not Tested,Not Tested,,,,
+PSA_RE_APTRFVS_EX05,"Verify, if a member has 
+Abnormal PSA Test Result or Finding Value Set: 12/31/MY-2",Abnormal PSA Test Result or Finding VS on MY-2,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=NULL
+ ",,Not Tested,Not Tested,,,,
+PSA_RE_APTRFVS_EX06,"Verify, if a member has 
+Abnormal PSA Test Result or Finding Value Set: 12/31/MY-1 Suppl source",Abnormal PSA Test Result or Finding VS on end of MY-1 using suppl source,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_APTRFVS_EX07,"Verify, if a member has 
+Abnormal PSA Test Result or Finding Value Set: 12/31/MY+1",Abnormal PSA Test Result or Finding VS on MY+1,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=NULL
+ ",,Not Tested,Not Tested,,,,
+PSA_GG_LAB_CLAIM_10,"Verify, if a member has 
+Abnormal PSA Test Result or Finding Value Set: 1/1/MY-1with POS81
+Snomed: 166160000","Lab claim allowed
+",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1
+ ",,Not Tested,Not Tested,,,,
+PSA_RE_APTRFVS_EX07_01,"Verify, if a member has 
+Abnormal PSA Test Result or Finding Value Set: 1/1/MY-1 (file_id : 18155], emr_in)-- primary
+Abnormal PSA Test Result or Finding Value Set: 12/31/MY-1 (file_id : 18055, emr_in)-- supple
+","Abnormal PSA Test Result or Finding Value Set on MY-1
+(here, in Exclusion_dt, first primary source would be given preference and then max serv date)
+
+(For file following will be precedence)
+- max file id
+- max serv_date",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_APTRFVS_EX07_02,"Verify, if a member has 
+Abnormal PSA Test Result or Finding Value Set: 1/1/MY-1 (file_id : 18158, emr_in)-- primary
+Abnormal PSA Test Result or Finding Value Set 12/31/MY-1 (file_id : 18155, emr_in)-- primary
+","Abnormal PSA Test Result or Finding Value Seton MY-1
+(here, in Exclusion_dt, first primary source would be given preference and then max serv date)
+
+(For file following will be precedence)
+- max file id
+- max serv_date",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY-1",,Not Tested,Not Tested,,,,
+,Table PSA-A(5 ARI Medications List),,,,,,,,,,
+PSA_RE_AML_47,"Verify, if a member has 
+5-ARI Medications List: 1/1/MY 
+(NDC code: 00054039513 from RX_IN)",5-ARI Medications List on beg of MY,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY ",,Not Tested,Not Tested,,,,
+PSA_RE_AML_47_01,"Verify, if a member has 
+5-ARI Medications List: 1/1/MY 
+(NDC code: 00054039513 from RX_IN with 0 days of supply)",5-ARI Medications List on beg of MY,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY ",,Not Tested,Not Tested,,,,
+PSA_RE_AML_48,"Verify, if a member has 
+5-ARI Medications List: 12/31/MY 
+USING RXNORM code: 200172 from EMR_IN table",5-ARI Medications List on end of MY using RXNORM code,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY ",,Not Tested,Not Tested,,,,
+PSA_RE_AML_48_01,"Verify, if a member has 
+5-ARI Medications List: 12/31/MY 
+USING RXNORM code: 200172 from EMR_IN with 0 days of supply)",5-ARI Medications List on end of MY using RXNORM code,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY ",,Not Tested,Not Tested,,,,
+PSA_RE_AML_49,"Verify, if a member has 
+5-ARI Medications List: 12/31/MY-1 
+(NDC code: 00054039513 from RX_IN)",5-ARI Medications List on MY-1,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=NULL",,Not Tested,Not Tested,,,,
+PSA_RE_AML_50,"Verify, if a member has 
+5-ARI Medications List: 1/1/MY +1
+(NDC code: 00054039513 from RX_IN)",5-ARI Medications List on MY+1,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=NULL",,Not Tested,Not Tested,,,,
+PSA_RE_AML_51,"Verify, if a member has 
+5-ARI Medications List: 1/1/MY Suppl source
+(NDC code: 00054039513 from RX_IN)",5-ARI Medications List on beg of MY from suppl source,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY",,Not Tested,Not Tested,,,,
+PSA_RE_AML_52,"Verify, if a member has 
+5-ARI Medications List: 12/31/MY Suppl source
+(NDC code: 00054039513 from RX_IN)",5-ARI Medications List on end of MY from suppl source,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY",,Not Tested,Not Tested,,,,
+PSA_GG_LAB_CLAIM_00,"Verify, if a member has 
+5-ARI Medications List: 1/1/MY with POS81
+USING RXNORM code: 200172 from EMR_IN table","Lab claim allowed
+",,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY",,Not Tested,Not Tested,,,,As per discussion as they are from separate file they will be treated as different claim even though used same dos and provider in lab_in and rx_in
+PSA_RE_AML_52_01,"Verify, if a member has 
+5-ARI Medications List: 1/1/MY (file_id : 80055], rx_in)-- primary
+5-ARI Medications List: 12/31/MY (file_id : 17555], rx_in)-- supple
+(NDC code: 00054039513 from RX_IN)",5-ARI Medications List on beg of MY,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY ",,Not Tested,Not Tested,,,,
+PSA_RE_AML_52_02,"Verify, if a member has 
+5-ARI Medications List: 1/1/MY (file_id : 80055], rx_in)-- primary
+5-ARI Medications List: 12/31/MY (file_id : 80000], rx_in)-- primary
+(NDC code: 00054039513 from RX_IN)",5-ARI Medications List on beg of MY,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY ",,Not Tested,Not Tested,,,,
+,Exclusions Combinatuion,,,,,,,,,,
+PSA_RE_53,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY
+Prostate Dysplasia Value Set: 1/1/MY",,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY",,Not Tested,Not Tested,,,,
+PSA_RE_54,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY
+Prostate Dysplasia Value Set: 12/31/MY-2",,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY",,Not Tested,Not Tested,,,,
+PSA_RE_55,"Verify, if a member has 
+PSA lab Test Exclusion Value Set: 1/1/MY-1
+Prostate Dysplasia Value Set: 1/1/MY
+Prostate Cancer and History of Prostate Cancer Value Set: 12/31/MY",,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=12/31/MY",,Not Tested,Not Tested,,,,
+PSA_RE_56,"Verify, if a member has 
+PSA Test Exclusion Value Set: 1/1/MY
+Prostate Dysplasia Value Set: 12/31/MY-2
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY+1
+5-ARI Medicatoin List: 1/1/MY-1",,,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=NULL",,Not Tested,Not Tested,,,,
+PSA_RE_59,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY-Supple source
+Prostate Dysplasia Value Set: 1/1/MY-Primary",,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY",,Not Tested,Not Tested,,,,
+PSA_RE_60,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY-Supple source
+Prostate Dysplasia Value Set: 1/1/MY-Supple source; Claim_Denied",,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY",,Not Tested,Not Tested,,,,
+,Additional Exclusion Cases ,,,,,,,,,,
+PSA_RE_57,"Verify, if a member has
+PSA Test Exclusion Value Set: 1/1/MY - 1 
+(CPT) >4 
+LAB_VALUE=4.5
+USE LAB_VALUE=N","NO visit record just LAB_IN record with CPT, LAB_VALUE=N",,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=NULL",,Not Tested,Not Tested,,,,
+PSA_RE_58,"Verify, if a member has 
+PSA Test Exclusion Value Set: 1/1/MY - 1 
+(HCPCS) >4 
+RESULT=4.5
+USE LAB_VALUE=N","NO visit record just EMR_IN record with HCPCS, LAB_VALUE=N",,"RE=0, AGE_END_REP_YR=77
+Exclusion_dt=NULL",,Not Tested,Not Tested,,,,
+,"Claim Denied (all claims (paid, suspended, pending and denied) must be included when identifying the eligible population. )",,,,,,,,,,
+PSA_RE_CD_01,"Verify, if a member has 
+Prostate Cancer and History of Prostate Cancer Value Set: 1/1/MY
+with CLAIM_DEN=Y",CLAIM_DEN=Y on MY,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY",,Not Tested,Not Tested,,,,
+PSA_RE_CD_02,"Verify, if a member has 
+Prostate Dysplasia Value Set: 1/1/MY-1
+with CLAIM_DEN=Y",CLAIM_DEN=Y on MY-1,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_CD_03,"Verify, if a member has 
+PSA Lab Test Exclusion Value Set: 1/1/MY-1
+with CLAIM_DEN=Y",CLAIM_DEN=Y on MY-1,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY-1",,Not Tested,Not Tested,,,,
+PSA_RE_CD_05,"Verify, if a member has 
+5 ARI Medications List: 1/1/MY
+with CLAIM_DEN=Y",CLAIM_DEN=Y on MY,,"RE=1, AGE_END_REP_YR=77
+Exclusion_dt=1/1/MY",,Not Tested,Not Tested,,,,
+,"NE
+(A PSA-based screening test (PSA Lab Test Value Set; PSA Test Result or Finding Value Set) performed during the measurement year.)",,,,,,,,,,
+,PSA Lab Tests Value Set,,,,,,,,,,
+PSA_NE_01,"Verify, if a member has 
+PSA Lab Tests Value Set: 1/1/MY",PSA Lab Tests VS on beg on MY,,"NE=1
+Numerator_dt: 1/1/MY, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+PSA_NE_01_01,"Verify, if a member has 
+PSA Lab Tests Value Set: 12/31/MY",PSA Lab Tests VS on end on MY,,"NE=1
+Numerator_dt: 12/31/MY,
+AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+PSA_NE_03,"Verify, if a member has 
+PSA Lab Tests Value Set: 12/31/MY-1",PSA Lab Tests VS on MY-1,,"NE=0
+Numerator_dt: NULL
+AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+PSA_NE_04,"Verify, if a member has 
+PSA Lab Tests Value Set: 1/1/MY+1",PSA Lab Tests VS on MY+1,,"NE=0
+Numerator_dt: NULL
+AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+PSA_NE_05,"Verify, if a member has 
+PSA lab Tests Value Set:1/1/MY with CLAIM DEN=Y",PSA Lab Tests VS on MY using claim den=Y,,"NE=0
+Numerator_dt: NULL
+AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+PSA_GG_LAB_CLAIM_003,"Verify, if a member has 
+PSA Lab Tests Value Set: 1/1/MY with POS81","Lab claim allowed
+",,"NE=1
+Numerator_dt: 1/1/MY, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+,PSA Test Result or Finding Value Set (Only Snomed Codes),,,,,,,,,,
+PSA_NE_02,"Verify, if a member has 
+PSA Test Result or Finding Value: 12/31/MY",PSA Test Result or Finding VS on end on MY,,"NE=1
+Numerator_dt: 12/31/MY",,Not Tested,Not Tested,,,,
+PSA_NE_06,"Verify, if a member has 
+PSA Test Result or Finding Value Set: 1/1/MY",PSA Test Result or Finding VS on beg on MY,,"NE=1
+Numerator_dt: 1/1/MY, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+PSA_NE_07,"Verify, if a member has 
+PSA Test Result or Finding Value Set: 12/31/MY-1",PSA Test Result or Finding VS on MY-1,,"NE=0
+Numerator_dt: NULL, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+PSA_NE_08,"Verify, if a member has 
+PSA Test Result or Finding Value Set: 1/1/MY+1",PSA Test Result or Finding VS on MY+1,,"NE=0
+Numerator_dt: NULL, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+PSA_GG_LAB_CLAIM_006,"Verify, if a member has 
+PSA Test Result or Finding Value Set: 1/1/MY with POS81","Lab claim allowed
+",,"NE=1
+Numerator_dt: 1/1/MY, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+,SNE,,,,,,,,,,
+,PSA Lab Tests Value Set,,,,,,,,,,
+PSA_SNE_01,"Verify, if a member has 
+PSA Lab Tests Value Set: 1/1/MY",PSA Lab Tests VS on beg on MY,,"NE=0
+Numerator_dt: NULL, AGE_END_REP_YR=77
+",,Not Tested,Not Tested,,,,
+PSA_SNE_02,"Verify, if a member has 
+PSA lab Tests Value Set:1/1/MY with CLAIM DEN=Y",PSA Lab Tests VS on MY using claim den=Y,,"NE=0
+Numerator_dt: NULL, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+,PSA Test Result or Finding Value Set,,,,,,,,,,
+PSA_SNE_03,"Verify, if a member has 
+PSA Test Result or Finding Value: 1/1/MY",PSA Test Result or Finding VS on end on MY,,"NE=0
+Numerator_dt: NULL, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+,Combination of NE and SNE ,,,,,,,,,,
+PSA_NE_SNE_01,"Verify, if a member has 
+PSA Tests Value Set: 1/1/MY - Primary
+PSA Tests Value Set: 12/31/MY - Suppl",,,"NE=1 and SNE=0
+Numerator_dt: 1/1/MY, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+PSA_NE_SNE_02,"Verify, if a member has 
+PSA Tests Value Set: 1/1/MY-1 - Primary
+PSA Tests Value Set; 1/1/MY - Suppl",,,"NE=0 and SNE=0
+Numerator_dt: NULL, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+PSA_NE_SNE_03,"Verify, if a member has 
+PSA Test Result or Finding Valuet: 1/1/MY-1- Primary
+PSA Test Result or Finding Value: 1/1/ MY- Suppl",,,"NE=0 and SNE=0
+Numerator_dt: NULL, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+PSA_NE_SNE_04,"Verify, if a member has 
+PSA Tests Value Set: 1/1/MY - Primary--90055
+PSA Tests Value Set: 12/31/MY - Primary--90014",Primary>>max serv_dt>>max file id -->max(claim_id),,"NE=1 and SNE=0
+Numerator_dt: 12/31/MY, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+PSA_NE_SNE_05,"Verify, if a member has 
+PSA Tests Value Set: 12/31/MY - Primary--90055
+PSA Tests Value Set: 12/31/MY - Primary--90014",Primary>>max serv_dt>>max file id -->max(claim_id),,"NE=1 and SNE=0
+Numerator_dt: 12/31/MY, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+,MISC ,,,,,,,,,,
+Misc_01,Verify that 2 columns NE and SNE exists in the Member_PSA_0 table,,,2 columns NE and SNE exists in the Member_PSA_0 table,,Not Tested,Not Tested,,,,
+Misc_02,DST Validation - Verify the DST data matched with Member_XXX,,,DST data matches with Member_XXX,,Not Tested,Not Tested,,,,
+Misc_03,Code count validation - Verify that code counts matches betwEEn NCQA specs and cod_all table ( This is done as part of the Oct updates story),,,Code counts should match,,Not Tested,Not Tested,,,,
+Misc_04,Verify that measure related table counts matches betwEEn Oracle and SQL server,,,Table counts should match,,Not Tested,Not Tested,,,,
+Misc_05,Verify Count between Member_XXX table and Suppl_File_id_summary table matches for both Oracle and SQL schema.,,, Count between Member_XXX table and Suppl_File_id_summary table should matches for both Oracle and SQL schema.,,Not Tested,Not Tested,,,,
+Misc_06,"Verify  following fields are added in measure final table
+1. MED_ELIG_CAT_ID
+2.SNP_TYPE
+3.PBP_NBR
+4.CIN_NUMBER
+5.RACE_ID 
+6.MEM_HISP_ORIG_ID
+7.MBI_NUMBER ","Add MED_ELIG_CAT_ID, SNP_TYPE, PBP_NBR & CIN_NUMBER  from ENROLLMENT to all MEMBER_XXX tables-  QSE-14224
+
+Add member RACE_ID and MEM_HISP_ORIG_ID (post-prelim) to all MEMBER_XXX tables- QSE-10741
+
+Add MBI_NUMBER  from MEMBER  to all MEMBER_XXX tables-QSE-SI request",,Columns should be available in Measure final table.,,Not Tested,Not Tested,,,,
+,Common scenarios,,,,,,,,,,
+PSA_CS_01,"Member is enrolled in 2 different plans for the same period for different products-
+Plan 1 - 1-JAN-MY - 31-DEC-MY - Product _id=18
+Plan 2 -1-JAN-MY - 31-DEC MY-- Product _id=92",,,"Member should be populated twice, once for each product",,Not Tested,Not Tested,,,,
+PSA_CS_02,"Member has different employEE numbers in different enrollment spans
+Enrollment span 1 - 1-JAN-MY to 31-MARCH-MY -Emp -1234 - product_id=11
+Enrollment span 1 - 1-APRIL-MY to 31-DEC-MY -Emp -3456 product_id=11",,,Member should not be duplicated in member_xxx and shoudl populated in Memebr_PSA table wtih EMP_NBR=3456,,Not Tested,Not Tested,,,,
+PSA_CS_ENH_01,"Verify If member has
+DOB: 12/31/MY-2
+Member_in: 
+RACE_CODE_1: 2126-1, RACE_CODE_1: Null, RACE_CODE_1: Null, MEM_HISP_ORIG: 2135-2,MBI_NUMBER: MBI_12345678 
+Enrollment 1: 1/1/MY to 12/31/MY
+(Product_id: 3, MED_ELIG_CAT_ID: 1, SNP_TYPE: 3, PBP_NBR: PB1, CIN_NUMBER: CIN_123456
+Enrollment 2: 1/1/MY-1 to 12/31/MY+1
+(Product_id: 3 & 11, MED_ELIG_CAT_ID: 2, SNP_TYPE: 4, PBP_NBR: PB2, CIN_NUMBER: CIN_654321","Both enrollment satisfy the CE criteira but have different enr_start_date.
+MED_ELIG_CAT_ID applicable only for medicaid PL.
+MED_ELIG_CAT_ID, SNP_TYPE, PBP_NBR and CIN_NUMBER value will be picked from enrollment with max end date. If multiple enrollment available with same max end date then priority will be given with enrollment with latest start date.",,"For Product_id: 3,
+MED_ELIG_CAT_ID: 2, SNP_TYPE: 4, PBP_NBR: PB2, CIN_NUMBER: CIN_654321,
+RACE_ID:1, MEM_HISP_ORIG: Y
+For Product_id: 11,
+MED_ELIG_CAT_ID: 0, SNP_TYPE: 4, PBP_NBR: PB2, CIN_NUMBER: CIN_654321
+RACE_ID:1, MEM_HISP_ORIG: Y",,Not Tested,Not Tested,,,,
+PSA_CS_ENH_02,"Verify If member has
+DOB: 12/31/MY-2
+Enrollment 1: 1/1/MY to 6/30/MY
+(Product_id: 3, MED_ELIG_CAT_ID: 1, SNP_TYPE: 3, PBP_NBR: PB1, CIN_NUMBER: CIN_123456
+Enrollment 2: 7/1/MY to 12/31/MY
+(Product_id: 3 & 11, MED_ELIG_CAT_ID: 2, SNP_TYPE: 4, PBP_NBR: PB2, CIN_NUMBER: CIN_654321","Both enrollment satisfy the CE criteira but have different enr_start_date.
+MED_ELIG_CAT_ID applicable only for medicaid PL.
+MED_ELIG_CAT_ID, SNP_TYPE, PBP_NBR and CIN_NUMBER value will be picked from enrollment with max end date. If multiple enrollment available with same max end date then priority will be given with enrollment with latest start date.",,"For Product_id: 3,
+MED_ELIG_CAT_ID: 2, SNP_TYPE: 4, PBP_NBR: PB2, CIN_NUMBER: CIN_654321
+For Product_id: 11,
+MED_ELIG_CAT_ID: 0, SNP_TYPE: 4, PBP_NBR: PB2, CIN_NUMBER: CIN_654321",,Not Tested,Not Tested,,,,
+PSA_CS_ENH_03,"Verify If member has
+DOB: 12/31/MY-2
+Enrollment 1: 1/1/MY to 12/31/MY
+(Product_id: 3, MED_ELIG_CAT_ID: 1, SNP_TYPE: 3, PBP_NBR: PB1, CIN_NUMBER: CIN_123456
+Enrollment 2: 7/1/MY to 12/31/MY
+(Product_id: 3 & 11, MED_ELIG_CAT_ID: 2, SNP_TYPE: 4, PBP_NBR: PB2, CIN_NUMBER: CIN_654321","Both enrollment satisfy the CE criteira but have different enr_start_date.
+MED_ELIG_CAT_ID applicable only for medicaid PL.
+MED_ELIG_CAT_ID, SNP_TYPE, PBP_NBR and CIN_NUMBER value will be picked from enrollment with max end date. If multiple enrollment available with same max end date then priority will be given with enrollment with latest start date.",,"For Product_id: 3,
+MED_ELIG_CAT_ID: 2, SNP_TYPE: 4, PBP_NBR: PB2, CIN_NUMBER: CIN_654321
+For Product_id: 11,
+MED_ELIG_CAT_ID: 0, SNP_TYPE: 4, PBP_NBR: PB2, CIN_NUMBER: CIN_654321",,Not Tested,Not Tested,,,,
+PSA_CS_ENH_04,"Verify If member has
+DOB: 12/31/MY-2
+Enrollment 1: 1/1/MY to 6/30/MY
+(Product_id: 3, MED_ELIG_CAT_ID: 1, SNP_TYPE: 3, PBP_NBR: PB1, CIN_NUMBER: CIN_123456
+Enrollment 2: 1/1/MY-1 to 12/31/MY
+(Product_id: 3 & 11, MED_ELIG_CAT_ID: 2, SNP_TYPE: 4, PBP_NBR: PB2, CIN_NUMBER: CIN_654321","Both enrollment satisfy the CE criteira but have different enr_start_date.
+MED_ELIG_CAT_ID applicable only for medicaid PL.
+MED_ELIG_CAT_ID, SNP_TYPE, PBP_NBR and CIN_NUMBER value will be picked from enrollment with max end date. If multiple enrollment available with same max end date then priority will be given with enrollment with latest start date.",,"For Product_id: 3,
+MED_ELIG_CAT_ID: 2, SNP_TYPE: 4, PBP_NBR: PB2, CIN_NUMBER: CIN_654321
+For Product_id: 11,
+MED_ELIG_CAT_ID: 0, SNP_TYPE: 4, PBP_NBR: PB2, CIN_NUMBER: CIN_654321",,Not Tested,Not Tested,,,,
+PSA_CE_SWITCH_01,"Member have :
+Medicare
+Continuous enrollment : The measurement year. 
+First Enrollment: 1/1/MY TO 3/1/MY, PRODUCT_ID=11, PLAN_ID=1
+Second Enrollment- 4/1/MY TO 12/31/2050, PRODUCT_ID=11, PLAN_ID=1
+Third Enrollment- 1/1/MY TO 6/30/MY, PRODUCT_ID=92, PLAN_ID=2",Design as per QSE Defect- QSE-6734,," For Product_id=11, Plan_ID=1, CE=1,BE=1
+ For Product_id=92, Plan_ID=2, CE=0,BE=0",,Not Tested,Not Tested,,,,
+PSA_CE_SWITCH_02,"Member have :
+Medicare
+Continuous enrollment : The measurement year. 
+First Enrollment: 1/1/MY TO 3/1/MY, PRODUCT_ID=11, PLAN_ID=1
+Second Enrollment- 4/1/MY TO 12/31/2050, PRODUCT_ID=11, PLAN_ID=1
+Third Enrollment- 1/1/MY-1 TO 12/31/MY-1, PRODUCT_ID=92, PLAN_ID=2",Design as per QSE Defect- QSE-6734. Here the 2nd enrollment for plan_id 2 has no enrollment during CE period,," For Product_id=11, Plan_ID=1, CE=1,BE=1
+ For Product_id=92, No member should populate in Memebr_PSA _0 table",,Not Tested,Not Tested,,,,
+Production bug ,,,,,,,,,,,
+,,,,,,Not Tested,Not Tested,,,,
+IDSS,,,,,,,,,,,
+,,,,,,Not Tested,Not Tested,,,,
+,"PSA - Lab claims are being allowed for PSA Test Result or Finding. Per guideline they should not be allowed, logic need to be updated.",,,,,,,,,,
+PSA_NE_DEFECT_01,"Verify, if a member has 
+PSA Test Result or Finding Value Set: 12/31/MY-1 with Using POS81",,,"NE=1,SNE=0
+Numerator_dt: NULL, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,
+PSA_SNE_DEFECT_02,"Verify, if a member has 
+PSA Test Result or Finding Value Set: 1/1/MY-1 with Using POS81",,,"NE=0,SNE=1
+Numerator_dt: NULL, AGE_END_REP_YR=77",,Not Tested,Not Tested,,,,

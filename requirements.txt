@@ -1,0 +1,9 @@
+pandas
+ollama
+langchain-ollama
+openpyxl
+pyyaml
+python-dotenv
+datetime
+typing-extensions
+faker
