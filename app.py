@@ -105,12 +105,15 @@ def index():
                 # Get performance options from form
                 disable_ai = request.form.get('disable_ai') == 'on'
                 skip_quality_check = request.form.get('skip_quality_check') == 'on'
+                validate_ncqa = request.form.get('validate_ncqa') == 'on'
                 
                 # Show what options are enabled
                 if disable_ai:
                     flash(f"⚡ AI Extractor disabled (regex-only mode for faster generation)", "info")
                 if skip_quality_check:
                     flash(f"⚡ Quality checks skipped (faster generation)", "info")
+                if validate_ncqa:
+                    flash(f"🔍 Validating against NCQA specification...", "info")
                 
                 # Run generation with options
                 output_file = run_measure_gen_custom(
@@ -118,7 +121,8 @@ def index():
                     tc_path, 
                     vsd_path,
                     skip_quality_check=skip_quality_check,
-                    disable_ai=disable_ai
+                    disable_ai=disable_ai,
+                    validate_ncqa=validate_ncqa
                 )
                 
                 if output_file and os.path.exists(output_file):
@@ -131,6 +135,10 @@ def index():
                 flash(f"❌ Generation error: {str(e)}", "error")
                 import traceback
                 print(traceback.format_exc())
+                return redirect(url_for('index'))
+
+
+
 
         elif action == 'validate':
             flash(f"✅ Validating mockup for {measure}...", "info")
@@ -189,6 +197,44 @@ def index():
                 print(traceback.format_exc())
 
     return render_template('index.html')
+
+
+@app.route('/convert_ncqa', methods=['POST'])
+def convert_ncqa():
+    """Convert uploaded NCQA PDF to YAML"""
+    if 'ncqa_pdf' not in request.files:
+        flash('No PDF uploaded', 'error')
+        return redirect(url_for('index'))
+    
+    file = request.files['ncqa_pdf']
+    measure = request.form.get('measure', 'PSA')
+    
+    if not file.filename:
+        flash('No file selected', 'error')
+        return redirect(url_for('index'))
+
+    # Save PDF temporarily
+    pdf_path = os.path.join(UPLOAD_FOLDER, f'{measure}_NCQA_Spec.pdf')
+    file.save(pdf_path)
+    
+    # Convert to YAML
+    output_path = f'config/ncqa/{measure}_NCQA.yaml'
+    os.makedirs('config/ncqa', exist_ok=True)
+    
+    try:
+        from src.ncqa_parser import NCQASpecParser
+        parser = NCQASpecParser(pdf_path)
+        # We need to ensure generate_config can take an output path or we modify it
+        # The existing generate_config takes output_path
+        parser.measure_name = measure
+        parser.generate_config(output_path)
+        
+        flash(f'✅ NCQA spec converted to {output_path}', 'success')
+        flash('📝 Please review and edit the YAML file if needed', 'info')
+    except Exception as e:
+        flash(f'❌ Conversion failed: {e}', 'error')
+    
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     print("🌐 Starting HEDIS Mockup Generator UI...")

@@ -15,7 +15,7 @@ load_dotenv()
 _vsd_cache = {}
 _ai_extractor_cache = None
 
-def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_check=False, disable_ai=None):
+def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_check=False, disable_ai=None, validate_ncqa=False):
     """
     Core function for running measure generation with explicit paths.
     Returns the path to the generated output file.
@@ -97,7 +97,7 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
     
     engine = MockupEngine(config_path, schema_path, vsd_manager=vsd_manager)
     
-    result = _process_measure(measure_name, parser, engine, skip_quality_check=skip_quality_check)
+    result = _process_measure(measure_name, parser, engine, skip_quality_check=skip_quality_check, validate_ncqa=validate_ncqa)
     
     total_time = time.time() - start_time
     print(f"\n⏱️  Total generation time: {total_time:.2f} seconds")
@@ -144,7 +144,7 @@ def run_measure_gen(measure_name):
     
     return run_measure_gen_custom(measure_name, testcase_path, vsd_path)
 
-def _process_measure(measure_name, parser, engine, output_path=None, audit_logger=None, skip_quality_check=False):
+def _process_measure(measure_name, parser, engine, output_path=None, audit_logger=None, skip_quality_check=False, validate_ncqa=False):
     """
     Core processing logic: parse scenarios, generate data, write output.
     
@@ -248,13 +248,50 @@ def _process_measure(measure_name, parser, engine, output_path=None, audit_logge
         
         # Warn if critical issues found
         if not quality_report['passed']:
-            print(f"\n⚠️  WARNING: {quality_report['total_issues']} critical issues found!")
-            print(f"   Review quality report: {quality_report_path}")
-            print(f"   Continuing with mockup generation...")
+            print(f"⚠️  Quality check failed! See report: {quality_report_path}")
     else:
         print("\n⚡ Skipping quality checks for faster generation")
 
-    # 5. Write to Output
+    # 5. Run NCQA Compliance Checks (if enabled)
+    if validate_ncqa and not skip_quality_check:
+        print("\n🔍 Checking NCQA compliance...")
+        try:
+            from src.ncqa_compliance import NCQAComplianceChecker
+            
+            # Look for NCQA spec
+            ncqa_spec_path = f'config/ncqa/{measure_name}_NCQA.yaml'
+            
+            # Use VSD manager from engine if available
+            vsd_manager = engine.vsd_manager if hasattr(engine, 'vsd_manager') else None
+            
+            checker = NCQAComplianceChecker(measure_config, ncqa_spec_path, vsd_manager)
+            compliance = checker.check_compliance(data_store, scenarios)
+            
+            print(f"   Compliance Score: {compliance['score']}/100")
+            
+            if compliance['issues']:
+                print("   ⚠️ Compliance Issues:")
+                for issue in compliance['issues']:
+                    print(f"   - {issue}")
+            else:
+                print("   ✅ Data appears compliant with available rules.")
+            
+            # Save simple report
+            report_path = f'output/{measure_name}_Compliance_Report.txt'
+            with open(report_path, 'w') as f:
+                f.write(f"NCQA Compliance Report for {measure_name}\n")
+                f.write(f"Score: {compliance['score']}/100\n")
+                f.write(f"Status: {'PASSED' if compliance['passed'] else 'FAILED'}\n\n")
+                f.write("Issues found:\n" if compliance['issues'] else "No issues found.\n")
+                for issue in compliance['issues']:
+                    f.write(f"- {issue}\n")
+                    
+        except ImportError:
+            print("⚠️ NCQAComplianceChecker not found. Skipping.")
+        except Exception as e:
+            print(f"⚠️ Compliance check error: {e}")
+
+    # 6. Write to Output
     print("\n📝 Writing output file...")
     if not output_path:
         output_path = f'output/{measure_name}_MY2026_Mockup_v15.xlsx'

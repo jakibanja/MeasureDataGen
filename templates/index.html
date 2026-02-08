@@ -258,19 +258,46 @@
 
     <div class="container">
         <h1>🏥 HEDIS Mockup Generator</h1>
-        <p class="subtitle">Generate NCQA-compliant test data with AI-powered parsing</p>
 
+        <!-- Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-        <div class="flash-messages">
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+            {{ message }}
         </div>
+        {% endfor %}
         {% endif %}
         {% endwith %}
 
-        <form method="POST" enctype="multipart/form-data" id="mainForm">
+        <!-- NCQA Converter Section -->
+        <div class="section" style="border-left: 4px solid #17a2b8;">
+            <h2>📄 NCQA Specification Converter</h2>
+            <form action="/convert_ncqa" method="POST" enctype="multipart/form-data" style="margin-bottom: 0;">
+                <p>Upload an official NCQA PDF specification to convert it to a YAML configuration file for validation.
+                </p>
+
+                <div class="form-group">
+                    <label>Upload NCQA PDF:</label>
+                    <input type="file" name="ncqa_pdf" accept=".pdf" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Measure:</label>
+                    <select name="measure" style="padding: 8px; border-radius: 4px;">
+                        <option value="PSA">PSA</option>
+                        <option value="WCC">WCC</option>
+                        <option value="IMA">IMA</option>
+                    </select>
+                </div>
+
+                <button type="submit" name="action" value="convert" class="btn-reformat" style="background: #17a2b8;">
+                    🔄 Convert PDF to YAML
+                </button>
+            </form>
+        </div>
+
+        <form method="POST" id="mainForm" enctype="multipart/form-data">
             <div class="section">
                 <h2>📋 Configuration</h2>
 
@@ -313,61 +340,72 @@
                         🤖 Upload to auto-generate measure config (experimental)
                     </div>
                 </div>
-            </div>
+                <div class="section">
+                    <h2>⚡ Performance Options</h2>
 
-            <div class="section">
-                <h2>⚡ Performance Options</h2>
-                
-                <div style="margin-bottom: 15px;">
-                    <label style="display: inline-flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" name="disable_ai" id="disable_ai" value="on" checked
-                            style="width: auto; margin-right: 8px;">
-                        <span>🚀 <strong>Disable AI Extractor</strong> - Use regex-only parsing (10x faster, recommended)</span>
-                    </label>
-                    <div class="info-box" style="margin-top: 8px; margin-left: 28px;">
-                        💡 Disabling AI makes generation much faster. Only enable if your test cases have complex/messy formats that regex can't parse.
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: inline-flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" name="disable_ai" id="disable_ai" value="on" checked
+                                style="width: auto; margin-right: 8px;">
+                            <span>🚀 <strong>Disable AI Extractor</strong> - Use regex-only parsing (10x faster,
+                                recommended)</span>
+                        </label>
+                        <div class="info-box" style="margin-top: 8px; margin-left: 28px;">
+                            💡 Disabling AI makes generation much faster. Only enable if your test cases have
+                            complex/messy formats that regex can't parse.
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: inline-flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" name="skip_quality_check" id="skip_quality_check" value="on"
+                                style="width: auto; margin-right: 8px;">
+                            <span>⚡ <strong>Skip Quality Checks</strong> - Faster generation (saves 2-5 seconds)</span>
+                        </label>
+                        <div class="info-box" style="margin-top: 8px; margin-left: 28px;">
+                            💡 Quality checks validate data integrity. Skip for faster testing, but run at least once
+                            before production use.
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: inline-flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" name="validate_ncqa" id="validate_ncqa" value="on" checked
+                                style="width: auto; margin-right: 8px;">
+                            <span>🔍 <strong>Validate against NCQA Spec</strong> - Ensure compliance</span>
+                        </label>
+                        <div class="info-box" style="margin-top: 8px; margin-left: 28px;">
+                            💡 Validates your configuration against official NCQA rules before generation.
+                        </div>
+                    </div>
+
+                    <div class="info-box" style="background: #fff3cd; color: #856404; border-left-color: #ffc107;">
+                        <strong>⏱️ Expected Generation Time:</strong><br>
+                        • With optimizations: <strong>2-6 seconds</strong> ⚡⚡⚡<br>
+                        • With AI enabled: <strong>18-53 seconds</strong> (first run only)<br>
                     </div>
                 </div>
 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: inline-flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" name="skip_quality_check" id="skip_quality_check" value="on"
-                            style="width: auto; margin-right: 8px;">
-                        <span>⚡ <strong>Skip Quality Checks</strong> - Faster generation (saves 2-5 seconds)</span>
-                    </label>
-                    <div class="info-box" style="margin-top: 8px; margin-left: 28px;">
-                        💡 Quality checks validate data integrity. Skip for faster testing, but run at least once before production use.
+                <div class="section">
+                    <h2>⚡ Actions</h2>
+                    <div class="button-group">
+                        <button type="submit" name="action" value="reformat" class="btn-reformat">
+                            🔄 Reformat Test Cases
+                        </button>
+                        <button type="submit" name="action" value="generate" class="btn-generate">
+                            🚀 Generate Mockup
+                        </button>
+                        <button type="submit" name="action" value="validate" class="btn-generate"
+                            style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                            ✅ Validate Results
+                        </button>
+                    </div>
+                    <div class="info-box" style="margin-top: 20px;">
+                        <strong>Reformat:</strong> Use AI to clean and standardize messy test cases<br>
+                        <strong>Generate:</strong> Create the full HEDIS mockup file<br>
+                        <strong>Validate:</strong> Verify generated data matches test case expectations
                     </div>
                 </div>
-
-                <div class="info-box" style="background: #fff3cd; color: #856404; border-left-color: #ffc107;">
-                    <strong>⏱️ Expected Generation Time:</strong><br>
-                    • With both options enabled: <strong>2-6 seconds</strong> ⚡⚡⚡<br>
-                    • With AI enabled: <strong>18-53 seconds</strong> (first run only)<br>
-                    • With quality checks: <strong>+2-5 seconds</strong>
-                </div>
-            </div>
-
-            <div class="section">
-                <h2>⚡ Actions</h2>
-                <div class="button-group">
-                    <button type="submit" name="action" value="reformat" class="btn-reformat">
-                        🔄 Reformat Test Cases
-                    </button>
-                    <button type="submit" name="action" value="generate" class="btn-generate">
-                        🚀 Generate Mockup
-                    </button>
-                    <button type="submit" name="action" value="validate" class="btn-generate"
-                        style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-                        ✅ Validate Results
-                    </button>
-                </div>
-                <div class="info-box" style="margin-top: 20px;">
-                    <strong>Reformat:</strong> Use AI to clean and standardize messy test cases<br>
-                    <strong>Generate:</strong> Create the full HEDIS mockup file<br>
-                    <strong>Validate:</strong> Verify generated data matches test case expectations
-                </div>
-            </div>
         </form>
     </div>
 
@@ -396,6 +434,11 @@
                         loadingSubtext.textContent = 'AI is analyzing and cleaning your data';
                         progressInfo.style.display = 'block';
                         document.getElementById('statusText').textContent = 'Reading test cases...';
+                    } else if (action === 'convert') {
+                        loadingText.textContent = '🔄 Converting PDF...';
+                        loadingSubtext.textContent = 'Parsing NCQA specification to YAML';
+                        progressInfo.style.display = 'block';
+                        document.getElementById('statusText').textContent = 'Extracting rules...';
                     } else if (action === 'generate') {
                         loadingText.textContent = '🚀 Generating Mockup...';
                         loadingSubtext.textContent = 'Processing scenarios and creating data tables';

@@ -241,13 +241,22 @@ class MockupEngine:
             # Try to get code from VSD if possible
             vsd_code = None
             if self.vsd_manager and component.get('value_set_names'):
-                vsd_code = self.vsd_manager.get_random_code(component['value_set_names'][0])
+                vs_name = component['value_set_names'][0]
+                vsd_code = self.vsd_manager.get_random_code(vs_name)
+                # Store metadata for compliance checking
+                row['_CODE'] = vsd_code
+                row['_VALUE_SET_NAME'] = vs_name
+            else:
+                row['_CODE'] = 'MANUAL'
+                row['_VALUE_SET_NAME'] = 'MANUAL'
 
             if component_name == "BMI Percentile":
                 row[target_table['fields']['bmi_percentile']] = 85
             elif "Counseling" in component_name:
                 code = vsd_code if vsd_code else ('Z71.3' if "Nutrition" in component_name else '97802')
-                row[target_table['fields'].get('procedure_codes', ['CPT_1'])[0]] = code
+                target_field = target_table['fields'].get('procedure_codes', ['CPT_1'])[0]
+                row[target_field] = code
+                if not row.get('_CODE'): row['_CODE'] = code # Fallback
             elif component_name == "PSA Test":
                 row[target_table['fields'].get('cpt', 'LAB_CPT')] = vsd_code if vsd_code else '84153'
                 row[target_table['fields'].get('value', 'LAB_VALUE')] = '1.0'
