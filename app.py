@@ -99,8 +99,24 @@ def index():
                     flash(f"❌ Configuration file not found: {config_path}. Please create it first or use the measure automator.", "error")
                     return redirect(url_for('index'))
                 
-                # Run generation
-                output_file = run_measure_gen_custom(measure, tc_path, vsd_path)
+                # Get performance options from form
+                disable_ai = request.form.get('disable_ai') == 'on'
+                skip_quality_check = request.form.get('skip_quality_check') == 'on'
+                
+                # Show what options are enabled
+                if disable_ai:
+                    flash(f"⚡ AI Extractor disabled (regex-only mode for faster generation)", "info")
+                if skip_quality_check:
+                    flash(f"⚡ Quality checks skipped (faster generation)", "info")
+                
+                # Run generation with options
+                output_file = run_measure_gen_custom(
+                    measure, 
+                    tc_path, 
+                    vsd_path,
+                    skip_quality_check=skip_quality_check,
+                    disable_ai=disable_ai
+                )
                 
                 if output_file and os.path.exists(output_file):
                     flash(f"✅ Mockup generated successfully!", "success")

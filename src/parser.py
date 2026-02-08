@@ -126,9 +126,29 @@ class TestCaseParser:
         # 3. Compliance & Exclusions
         for comp in numerator_comps:
             kw = comp['name'].lower()
+            found = False
+            
+            # Direct keyword match
             if kw in blob_full:
-                if comp['name'] not in parsed_sc["compliant"]:
-                    parsed_sc["compliant"].append(comp['name'])
+                found = True
+            
+            # PSA-specific patterns
+            if 'psa' in kw and 'test' in kw:
+                # Look for CE=1, CE:1, CE 1, Clinical Event=1, etc.
+                if re.search(r'\bce\s*[:=]\s*1\b', blob_full):
+                    found = True
+                # Look for "PSA", "Lab", "Screening", "Clinical Event"
+                if any(pattern in blob_full for pattern in ['psa', 'lab test', 'screening', 'clinical event']):
+                    # But exclude if it says "no psa", "not tested", "ce=0", "ce:0"
+                    if not any(neg in blob_full for neg in ['no psa', 'not tested', 'ce=0', 'ce:0', 'ce =0', 'ce:  0']):
+                        found = True
+            
+            # Add other measure-specific patterns here as needed
+            # WCC: BMI, Nutrition, Physical Activity
+            # IMA: Immunization, Vaccine, etc.
+            
+            if found and comp['name'] not in parsed_sc["compliant"]:
+                parsed_sc["compliant"].append(comp['name'])
         
         for excl in exclusion_comps:
             if excl['name'].lower() in blob_full:

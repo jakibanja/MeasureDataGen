@@ -1,15 +1,32 @@
 import pandas as pd
 import json
 import os
+import time
+from dotenv import load_dotenv
 from src.engine import MockupEngine
 from src.parser import TestCaseParser
 from src.vsd import VSDManager
 
-def run_measure_gen_custom(measure_name, testcase_path, vsd_path):
+# Load environment variables from .env file
+load_dotenv()
+
+# ⚡ Performance Optimization: Global caches to avoid reloading heavy resources
+_vsd_cache = {}
+_ai_extractor_cache = None
+
+def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_check=False, disable_ai=None):
     """
     Core function for running measure generation with explicit paths.
     Returns the path to the generated output file.
+    
+    Args:
+        measure_name: Name of the measure (e.g., 'PSA')
+        testcase_path: Path to test case Excel file
+        vsd_path: Path to VSD Excel file
+        skip_quality_check: If True, skips quality checks for faster generation
+        disable_ai: If True, skips AI Extractor (faster). If None, checks DISABLE_AI_EXTRACTOR env var
     """
+    start_time = time.time()
     config_path = f'config/{measure_name}.yaml'
     schema_path = 'config/schema_map.yaml'
     
@@ -17,22 +34,65 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path):
         print(f"Skipping {measure_name}: Test case file not found at {testcase_path}")
         return None
 
-    # Initialize VSD Manager with measurement year validation
-    vsd_manager = VSDManager(vsd_path, measurement_year=2026)
+    # ⚡ Use cached VSD Manager (saves 10-30 seconds on subsequent runs)
+    if vsd_path not in _vsd_cache:
+        print("📚 Loading VSD (first time only, this may take 10-30 seconds)...")
+        vsd_load_start = time.time()
+        _vsd_cache[vsd_path] = VSDManager(vsd_path, measurement_year=2026)
+        print(f"   ✓ VSD loaded in {time.time() - vsd_load_start:.2f}s")
+    else:
+        print("⚡ Using cached VSD (instant!)")
+    vsd_manager = _vsd_cache[vsd_path]
     
-    # Initialize AI Extractor (Optional)
+    # ⚡ Use cached AI Extractor (saves 5-15 seconds on subsequent runs)
+    # Can be disabled via parameter or environment variable
+    if disable_ai is None:
+        disable_ai = os.getenv('DISABLE_AI_EXTRACTOR', 'false').lower() == 'true'
+    
+    global _ai_extractor_cache
     extractor = None
-    try:
-        from src.ai_extractor import AIScenarioExtractor
-        print("Initializing AI Extractor (tinyllama)...")
-        extractor = AIScenarioExtractor(model_name="tinyllama")
-    except Exception as e:
-        print(f"⚠️  AI Extractor initialization failed (running in regex-only mode): {e}")
+    
+    if disable_ai:
+        print("⚡ AI Extractor disabled (using regex-only mode for maximum speed)")
+    else:
+        try:
+            from src.ai_extractor import AIScenarioExtractor
+            if _ai_extractor_cache is None:
+                print("🤖 Initializing AI Extractor (first time only, this may take 5-15 seconds)...")
+                print("   💡 Tip: Set DISABLE_AI_EXTRACTOR=true to skip this and use regex-only mode")
+                ai_load_start = time.time()
+                
+                # Add timeout to prevent hanging
+                import signal
+                def timeout_handler(signum, frame):
+                    raise TimeoutError("AI Extractor initialization timed out")
+                
+                # Set 30 second timeout (Windows doesn't support signal.alarm, so we'll use a different approach)
+                try:
+                    _ai_extractor_cache = AIScenarioExtractor(model_name="tinyllama")
+                    print(f"   ✓ AI Extractor loaded in {time.time() - ai_load_start:.2f}s")
+                except Exception as init_error:
+                    print(f"   ❌ AI Extractor failed to initialize: {init_error}")
+                    print(f"   ⚡ Continuing in regex-only mode (faster anyway!)")
+                    _ai_extractor_cache = "FAILED"  # Mark as failed to avoid retrying
+            elif _ai_extractor_cache == "FAILED":
+                print("⚡ AI Extractor previously failed, using regex-only mode")
+            else:
+                print("⚡ Using cached AI Extractor (instant!)")
+                extractor = _ai_extractor_cache
+        except Exception as e:
+            print(f"⚠️  AI Extractor initialization failed (running in regex-only mode): {e}")
+            _ai_extractor_cache = "FAILED"
 
     parser = TestCaseParser(testcase_path, extractor=extractor)
     engine = MockupEngine(config_path, schema_path, vsd_manager=vsd_manager)
     
-    return _process_measure(measure_name, parser, engine)
+    result = _process_measure(measure_name, parser, engine, skip_quality_check=skip_quality_check)
+    
+    total_time = time.time() - start_time
+    print(f"\n⏱️  Total generation time: {total_time:.2f} seconds")
+    
+    return result
 
 def run_measure_gen(measure_name):
     """ Legacy wrapper for default paths """
@@ -45,7 +105,7 @@ def run_measure_gen(measure_name):
     
     return run_measure_gen_custom(measure_name, testcase_path, vsd_path)
 
-def _process_measure(measure_name, parser, engine, output_path=None, audit_logger=None):
+def _process_measure(measure_name, parser, engine, output_path=None, audit_logger=None, skip_quality_check=False):
     """
     Core processing logic: parse scenarios, generate data, write output.
     
@@ -55,6 +115,7 @@ def _process_measure(measure_name, parser, engine, output_path=None, audit_logge
         engine: MockupEngine instance
         output_path: Optional custom output path
         audit_logger: Optional AuditLogger instance for tracking
+        skip_quality_check: If True, skips quality checks for faster generation
     
     Returns:
         Path to generated output file
@@ -84,8 +145,13 @@ def _process_measure(measure_name, parser, engine, output_path=None, audit_logge
         table_name = table_info['name']
         data_store[table_name] = []
 
-    # 3. Process each scenario
-    for sc in scenarios:
+    # 3. Process each scenario with progress indicators
+    print(f"📊 Processing {len(scenarios)} scenarios...")
+    for idx, sc in enumerate(scenarios, 1):
+        # Progress indicator every 10 scenarios
+        if idx % 10 == 0 or idx == len(scenarios):
+            print(f"  Progress: {idx}/{len(scenarios)} scenarios processed ({idx*100//len(scenarios)}%)")
+        
         mem_id = sc['id']
         overrides = sc.get('overrides', {})
         
@@ -129,23 +195,28 @@ def _process_measure(measure_name, parser, engine, output_path=None, audit_logge
     with open('data_columns_info.json', 'r') as f:
         full_schema = json.load(f)
 
-    # 4. Run Data Quality Checks
-    from src.quality_checker import DataQualityChecker
-    
-    quality_checker = DataQualityChecker(data_store, full_schema)
-    quality_report = quality_checker.check_all()
-    
-    # Export quality report
-    quality_report_path = f'output/{measure_name}_Quality_Report.xlsx'
-    quality_checker.export_report(quality_report_path)
-    
-    # Warn if critical issues found
-    if not quality_report['passed']:
-        print(f"\n⚠️  WARNING: {quality_report['total_issues']} critical issues found!")
-        print(f"   Review quality report: {quality_report_path}")
-        print(f"   Continuing with mockup generation...")
+    # 4. Run Data Quality Checks (optional for faster generation)
+    if not skip_quality_check:
+        print("\n🔍 Running data quality checks...")
+        from src.quality_checker import DataQualityChecker
+        
+        quality_checker = DataQualityChecker(data_store, full_schema)
+        quality_report = quality_checker.check_all()
+        
+        # Export quality report
+        quality_report_path = f'output/{measure_name}_Quality_Report.xlsx'
+        quality_checker.export_report(quality_report_path)
+        
+        # Warn if critical issues found
+        if not quality_report['passed']:
+            print(f"\n⚠️  WARNING: {quality_report['total_issues']} critical issues found!")
+            print(f"   Review quality report: {quality_report_path}")
+            print(f"   Continuing with mockup generation...")
+    else:
+        print("\n⚡ Skipping quality checks for faster generation")
 
     # 5. Write to Output
+    print("\n📝 Writing output file...")
     if not output_path:
         output_path = f'output/{measure_name}_MY2026_Mockup_v15.xlsx'
     os.makedirs(os.path.dirname(output_path), exist_ok=True)

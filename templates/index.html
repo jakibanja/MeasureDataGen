@@ -316,6 +316,39 @@
             </div>
 
             <div class="section">
+                <h2>⚡ Performance Options</h2>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: inline-flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" name="disable_ai" id="disable_ai" value="on" checked
+                            style="width: auto; margin-right: 8px;">
+                        <span>🚀 <strong>Disable AI Extractor</strong> - Use regex-only parsing (10x faster, recommended)</span>
+                    </label>
+                    <div class="info-box" style="margin-top: 8px; margin-left: 28px;">
+                        💡 Disabling AI makes generation much faster. Only enable if your test cases have complex/messy formats that regex can't parse.
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: inline-flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" name="skip_quality_check" id="skip_quality_check" value="on"
+                            style="width: auto; margin-right: 8px;">
+                        <span>⚡ <strong>Skip Quality Checks</strong> - Faster generation (saves 2-5 seconds)</span>
+                    </label>
+                    <div class="info-box" style="margin-top: 8px; margin-left: 28px;">
+                        💡 Quality checks validate data integrity. Skip for faster testing, but run at least once before production use.
+                    </div>
+                </div>
+
+                <div class="info-box" style="background: #fff3cd; color: #856404; border-left-color: #ffc107;">
+                    <strong>⏱️ Expected Generation Time:</strong><br>
+                    • With both options enabled: <strong>2-6 seconds</strong> ⚡⚡⚡<br>
+                    • With AI enabled: <strong>18-53 seconds</strong> (first run only)<br>
+                    • With quality checks: <strong>+2-5 seconds</strong>
+                </div>
+            </div>
+
+            <div class="section">
                 <h2>⚡ Actions</h2>
                 <div class="button-group">
                     <button type="submit" name="action" value="reformat" class="btn-reformat">

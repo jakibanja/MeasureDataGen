@@ -7,3 +7,5 @@ python-dotenv
 datetime
 typing-extensions
 faker
+flask
+PyPDF2
