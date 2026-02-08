@@ -4,12 +4,15 @@ from main import run_measure_gen_custom
 from src.reformatter import TestCaseReformatter
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey_hedis_2026'
+app.secret_key = 'hedis_mockup_secret_key_2026'
 
-# Config
-UPLOAD_FOLDER = 'data_uploads'
-OUTPUT_FOLDER = 'output'
+# Folder Configuration
+UPLOAD_FOLDER = 'uploads'      # Temporary uploads
+DATA_FOLDER = 'data'            # Processed test cases
+OUTPUT_FOLDER = 'output'        # Generated mockups
+
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(DATA_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # VSD Configuration - Use environment variable

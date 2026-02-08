@@ -30,8 +30,8 @@ Thumbs.db
 output/*.csv
 output/*.xlsx
 output/*.json
-data_uploads/*
-!data_uploads/.gitkeep
+uploads/*
+!uploads/.gitkeep
 
 # Temporary files
 *.tmp
