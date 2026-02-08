@@ -106,37 +106,32 @@ class AIScenarioExtractor:
         objective = test_case_row.get('objective', '')
         expected = test_case_row.get('expected', '')
         
-        prompt = f"""Extract structured data from this HEDIS test case. Return ONLY valid JSON.
+        prompt = f"""Extract STRUCTURED HEDIS data from this test case. Return ONLY valid JSON.
 
 Test Case ID: {tc_id}
 Scenario: {scenario}
-Objective: {objective}
-Expected: {expected}
+Expected Results: {expected}
 
-Extract:
-1. enrollment_spans: List of enrollment periods
-   - Look for "CE:", "enrollment", or date ranges like "1/1/MY-1 TO 10/1/MY"
-   - MY = 2026, MY-1 = 2025, MY+1 = 2027
-   - Multiple spans = enrollment gaps
-   
-2. product_line: Commercial/Medicaid/Medicare/Exchange (default: Medicare)
-3. age: Integer (default: 70)
-4. gender: M/F/O (default: M)
-5. gap_days: Days gap if mentioned (null if not)
-6. expected_results: Flags like CE=1, AD=0, etc.
-7. clinical_events: Events mentioned (PSA Test, BMI, etc.)
-8. exclusions: Exclusions mentioned (Hospice, etc.)
+CRITICAL INSTRUCTIONS:
+1. ENROLLMENT:
+   - Identify EVERY enrollment span listed. Check for dates separated by "TO", "-", or "AND".
+   - If multiple spans exist (e.g. 1/1-10/1 AND 11/15-12/31), list them ALL.
+   - Use MY=2026, MY-1=2025.
 
-Return ONLY this JSON (no other text):
+2. VISITS & EVENTS:
+   - Identify EVERY date where a service occurred.
+   - For EACH event (PSA test, BMI, visit), extract: name, value, and DATE.
+
+3. DATA FORMAT:
+   - Return valid JSON matching the schema below.
+
 {{
-  "enrollment_spans": [{{"start": "1/1/MY-1", "end": "10/1/MY", "product_id": null}}],
-  "product_line": "Medicare",
+  "enrollment_spans": [{{"start": "MM/DD/YYYY", "end": "MM/DD/YYYY", "product_id": null}}],
+  "clinical_events": [{{"name": "Event Name", "value": "1", "date": "MM/DD/YYYY"}}],
+  "product_line": "Medicare/Commercial/Medicaid",
   "age": 70,
-  "gender": "M",
-  "gap_days": null,
-  "expected_results": {{"CE": 1}},
-  "clinical_events": [],
-  "exclusions": []
+  "gender": "M/F",
+  "exclusions": ["Hospice", "etc"]
 }}"""
 
         return prompt

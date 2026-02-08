@@ -95,10 +95,10 @@ class StandardFormatParser:
         scenario['visit_spans'] = self._parse_visits(row)
         
         # Parse clinical events (compliant components)
-        scenario['compliant'] = self._parse_events(row, measure_config)
+        scenario['compliant'] = self._parse_events(row, measure_config, scenario['overrides'])
         
         # Parse exclusions
-        scenario['excluded'] = self._parse_exclusions(row, measure_config)
+        scenario['excluded'] = self._parse_exclusions(row, measure_config, scenario['overrides'])
         
         return scenario
     
@@ -172,7 +172,7 @@ class StandardFormatParser:
         
         return visits
     
-    def _parse_events(self, row: pd.Series, measure_config: Dict[str, Any]) -> List[str]:
+    def _parse_events(self, row: pd.Series, measure_config: Dict[str, Any], overrides: Dict[str, Any]) -> List[str]:
         """
         Parse clinical events from EVENT_X_NAME/VALUE columns.
         
@@ -208,16 +208,32 @@ class StandardFormatParser:
             
             if is_present:
                 # Match event name to component name (case-insensitive)
+                event_name_matched = event_name
                 event_name_lower = event_name.lower()
                 if event_name_lower in component_names:
-                    compliant.append(component_names[event_name_lower])
-                else:
-                    # Add as-is if not found in config (might be valid)
-                    compliant.append(event_name)
+                    event_name_matched = component_names[event_name_lower]
+                
+                compliant.append(event_name_matched)
+                
+                # Check for metadata (CODE, DATE, VALUE)
+                code_col = f'EVENT_{i}_CODE'
+                date_col = f'EVENT_{i}_DATE'
+                
+                event_meta = {'value': event_value} # Always include value
+                if code_col in row and pd.notna(row[code_col]):
+                    event_meta['code'] = str(row[code_col]).strip()
+                if date_col in row and pd.notna(row[date_col]):
+                    event_meta['date'] = str(row[date_col]).strip()
+                    
+                if event_meta:
+                    # Initialize overrides['events'] if it doesn't exist
+                    # We'll use the matched name for linking
+                    if 'events' not in overrides: overrides['events'] = {}
+                    overrides['events'][event_name_matched] = event_meta
         
         return compliant
-    
-    def _parse_exclusions(self, row: pd.Series, measure_config: Dict[str, Any]) -> List[str]:
+
+    def _parse_exclusions(self, row: pd.Series, measure_config: Dict[str, Any], overrides: Dict[str, Any]) -> List[str]:
         """
         Parse exclusions from EXCLUSION_X_NAME/VALUE columns.
         
@@ -250,12 +266,23 @@ class StandardFormatParser:
             
             if is_present:
                 # Match exclusion name (case-insensitive)
+                exclusion_name_matched = exclusion_name
                 exclusion_name_lower = exclusion_name.lower()
                 if exclusion_name_lower in exclusion_names:
-                    excluded.append(exclusion_names[exclusion_name_lower])
-                else:
-                    # Add as-is if not found in config
-                    excluded.append(exclusion_name)
+                    exclusion_name_matched = exclusion_names[exclusion_name_lower]
+                
+                excluded.append(exclusion_name_matched)
+                
+                # Check for metadata (DATE)
+                date_col = f'EXCLUSION_{i}_DATE'
+                
+                excl_meta = {}
+                if date_col in row and pd.notna(row[date_col]):
+                    excl_meta['date'] = str(row[date_col]).strip()
+                    
+                if excl_meta:
+                    if 'exclusions' not in overrides: overrides['exclusions'] = {}
+                    overrides['exclusions'][exclusion_name_matched] = excl_meta
         
         return excluded
 

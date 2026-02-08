@@ -13,10 +13,10 @@ rules:
   initial_population:
     - event: "Medicare Product Line"
       criteria: "Product Line = Medicare"
-      table: "PSA_ENROLLMENT_IN"
+      table: "enrollment"
     - event: "Outpatient Visit"
       value_set_names: ["Outpatient"]
-      table: "PSA_VISIT_IN"
+      table: "visit"
 
   exclusions:
     - name: "Hospice"
@@ -30,4 +30,4 @@ rules:
     numerator_components:
       - name: "PSA Test"
         value_set_names: ["PSA Lab Test"]
-        table: "PSA_LAB_IN"
+        table: "lab"

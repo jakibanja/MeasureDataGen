@@ -136,9 +136,24 @@ class StandardTestCaseReformatter:
         row_text = ' '.join([str(v) for v in row.values if pd.notna(v)])
         row_text_lower = row_text.lower()
         
+        # Use AI if enabled and available
+        if self.use_ai and self.ai_extractor:
+            try:
+                ai_data = self.ai_extractor.extract_scenario_info({
+                    'id': str(row.get('MEMBER_ID', row.get('MEM_NBR', ''))),
+                    'scenario': row_text,
+                    'expected': str(row.get('EXPECTED_RESULT', ''))
+                })
+                # Overlay AI data onto scenario early
+                if ai_data.get('age'): scenario['AGE'] = ai_data['age']
+                if ai_data.get('gender'): scenario['GENDER'] = ai_data['gender']
+                if ai_data.get('product_line'): scenario['PRODUCT_LINE'] = ai_data['product_line']
+            except:
+                pass
+
         # 1. Extract MEMBER_ID
         scenario['MEMBER_ID'] = self._extract_member_id(row)
-        if not scenario['MEMBER_ID']:
+        if not scenario.get('MEMBER_ID'):
             return {}  # Skip rows without member ID
         
         # 2. Extract AGE
@@ -151,26 +166,62 @@ class StandardTestCaseReformatter:
         scenario['PRODUCT_LINE'] = self._extract_product_line(row, row_text)
         
         # 5. Extract ENROLLMENT periods
-        enrollments = self._extract_enrollments(row, row_text)
-        for i, enr in enumerate(enrollments, 1):
+        enrollments = []
+        if self.use_ai and self.ai_extractor and ai_data.get('enrollment_spans'):
+            enrollments = ai_data['enrollment_spans']
+        else:
+            enrollments = self._extract_enrollments(row, row_text)
+            
+        for i, enr in enumerate(enrollments[:5], 1):
             scenario[f'ENROLLMENT_{i}_START'] = enr.get('start')
             scenario[f'ENROLLMENT_{i}_END'] = enr.get('end')
-            if 'product_id' in enr:
+            if enr.get('product_id'):
                 scenario[f'ENROLLMENT_{i}_PRODUCT_ID'] = enr.get('product_id')
         
         # 6. Extract VISITS
-        visits = self._extract_visits(row, row_text)
-        for i, visit in enumerate(visits, 1):
+        visits = []
+        if self.use_ai and self.ai_extractor and ai_data.get('clinical_events'):
+            # Filter for generic visits or use all clinical events as visits if they have dates
+            for evt in ai_data['clinical_events']:
+                if isinstance(evt, dict) and evt.get('date'):
+                    visits.append(evt)
+        
+        if not visits:
+            visits = self._extract_visits(row, row_text)
+            
+        for i, visit in enumerate(visits[:5], 1):
             scenario[f'VISIT_{i}_DATE'] = visit.get('date')
-            if 'type' in visit:
+            if visit.get('type'):
                 scenario[f'VISIT_{i}_TYPE'] = visit.get('type')
         
-        # 7. Extract CLINICAL EVENTS (measure-specific)
+        # 7. Extract CLINICAL EVENTS & EXCLUSIONS (Universal Layout)
+        events = []
+        exclusions = []
+        
         if self.measure == 'PSA':
-            scenario['PSA_TEST'] = self._extract_psa_test(row, row_text)
-            scenario['HOSPICE'] = self._extract_hospice(row, row_text)
-            scenario['PROSTATE_CANCER'] = self._extract_prostate_cancer(row, row_text)
-            scenario['DECEASED'] = self._extract_deceased(row, row_text)
+            if self._extract_psa_test(row, row_text) == 1:
+                events.append({'name': 'PSA Test', 'value': 1})
+            if self._extract_hospice(row, row_text) == 1:
+                exclusions.append({'name': 'Hospice', 'value': 1})
+            if self._extract_prostate_cancer(row, row_text) == 1:
+                exclusions.append({'name': 'Prostate Cancer', 'value': 1})
+            if self._extract_deceased(row, row_text) == 1:
+                exclusions.append({'name': 'Deceased', 'value': 1})
+        elif self.measure == 'WCC':
+            # Add WCC specific logic if needed
+            pass
+            
+        # Distribute into EVENT_i columns
+        for i, evt in enumerate(events[:5], 1):
+            scenario[f'EVENT_{i}_NAME'] = evt['name']
+            scenario[f'EVENT_{i}_VALUE'] = evt['value']
+            scenario[f'EVENT_{i}_DATE'] = evt.get('date', '6/1/2026')
+            
+        # Distribute into EXCLUSION_i columns
+        for i, exc in enumerate(exclusions[:3], 1):
+            scenario[f'EXCLUSION_{i}_NAME'] = exc['name']
+            scenario[f'EXCLUSION_{i}_VALUE'] = exc['value']
+            scenario[f'EXCLUSION_{i}_DATE'] = exc.get('date', '3/15/2026')
         
         # 8. Extract EXPECTED_RESULT
         scenario['EXPECTED_RESULT'] = self._extract_expected_result(row, row_text)
@@ -378,41 +429,28 @@ class StandardTestCaseReformatter:
             'ENROLLMENT_5_PRODUCT_ID',
             
             # Visits (up to 5)
-            'VISIT_1_DATE',
-            'VISIT_1_TYPE',
-            'VISIT_2_DATE',
-            'VISIT_2_TYPE',
-            'VISIT_3_DATE',
-            'VISIT_3_TYPE',
-            'VISIT_4_DATE',
-            'VISIT_4_TYPE',
-            'VISIT_5_DATE',
-            'VISIT_5_TYPE',
-        ]
-        
-        # Add measure-specific columns
-        if self.measure == 'PSA':
-            columns.extend([
-                'PSA_TEST',
-                'PSA_TEST_DATE',
-                'HOSPICE',
-                'HOSPICE_DATE',
-                'PROSTATE_CANCER',
-                'DECEASED',
-                'DECEASED_DATE',
-            ])
-        elif self.measure == 'WCC':
-            columns.extend([
-                'BMI_PERCENTILE',
-                'NUTRITION_COUNSELING',
-                'PHYSICAL_ACTIVITY_COUNSELING',
-            ])
-        
-        # Add metadata
-        columns.extend([
+            'VISIT_1_DATE', 'VISIT_1_TYPE', 'VISIT_1_CPT', 'VISIT_1_DIAG',
+            'VISIT_2_DATE', 'VISIT_2_TYPE', 'VISIT_2_CPT', 'VISIT_2_DIAG',
+            'VISIT_3_DATE', 'VISIT_3_TYPE', 'VISIT_3_CPT', 'VISIT_3_DIAG',
+            'VISIT_4_DATE', 'VISIT_4_TYPE', 'VISIT_4_CPT', 'VISIT_4_DIAG',
+            'VISIT_5_DATE', 'VISIT_5_TYPE', 'VISIT_5_CPT', 'VISIT_5_DIAG',
+
+            # Events (Universal Layout - up to 5)
+            'EVENT_1_NAME', 'EVENT_1_VALUE', 'EVENT_1_DATE', 'EVENT_1_CODE',
+            'EVENT_2_NAME', 'EVENT_2_VALUE', 'EVENT_2_DATE', 'EVENT_2_CODE',
+            'EVENT_3_NAME', 'EVENT_3_VALUE', 'EVENT_3_DATE', 'EVENT_3_CODE',
+            'EVENT_4_NAME', 'EVENT_4_VALUE', 'EVENT_4_DATE', 'EVENT_4_CODE',
+            'EVENT_5_NAME', 'EVENT_5_VALUE', 'EVENT_5_DATE', 'EVENT_5_CODE',
+
+            # Exclusions (Universal Layout - up to 3)
+            'EXCLUSION_1_NAME', 'EXCLUSION_1_VALUE', 'EXCLUSION_1_DATE',
+            'EXCLUSION_2_NAME', 'EXCLUSION_2_VALUE', 'EXCLUSION_2_DATE',
+            'EXCLUSION_3_NAME', 'EXCLUSION_3_VALUE', 'EXCLUSION_3_DATE',
+            
+            # Metadata
             'EXPECTED_RESULT',
             'SCENARIO_DESCRIPTION',
-        ])
+        ]
         
         return columns
 

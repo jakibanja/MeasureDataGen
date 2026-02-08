@@ -1,36 +1,34 @@
 measure_name: IMA
-description: Prostate Cancer Screening (HEDIS/Cotiviti)
+description: Immunizations for Adolescents
 rules:
-  age_range:
-  - 66
-  - 100
-  age_as_of: December 31
-  anchor_date_type: calendar_end
+  age_range: [13, 13] # Usually 13th birthday
+  age_as_of: "December 31"
+  anchor_date_type: "calendar_end"
+  
   continuous_enrollment:
     period_months: 12
     allowable_gap_days: 45
     no_gap_on_last_day: true
+
   initial_population:
-  - event: Medicare Product Line
-    criteria: Product Line = Medicare
-    table: PSA_ENROLLMENT_IN
-  - event: Outpatient Visit
-    value_set_names:
-    - Outpatient
-    table: PSA_VISIT_IN
+    - event: "Outpatient Visit"
+      value_set_names: ["Outpatient"]
+      table: "visit"
+
   exclusions:
-  - name: Hospice
-    value_set_names:
-    - Hospice Encounter
-    - Hospice Intervention
-  - name: Prostate Cancer
-    value_set_names:
-    - Prostate Cancer and History of Prostate Cancer
-  - name: Death
-    criteria: Date of death within measurement period
+    - name: "Hospice"
+      value_set_names: ["Hospice Encounter", "Hospice Intervention"]
+    - name: "Death"
+      criteria: "Date of death within measurement period"
+
   clinical_events:
     numerator_components:
-    - name: PSA Test
-      value_set_names:
-      - PSA Lab Test
-      table: PSA_LAB_IN
+      - name: "Meningococcal"
+        value_set_names: ["Meningococcal Vaccine", "Meningococcal Allergen"]
+        table: "visit"
+      - name: "Tdap"
+        value_set_names: ["Tdap Vaccine", "Tdap Allergen"]
+        table: "visit"
+      - name: "HPV"
+        value_set_names: ["HPV Vaccine", "HPV Allergen"]
+        table: "visit"

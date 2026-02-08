@@ -36,13 +36,13 @@
 2. Add instructions sheet and data validation drop-downs.
 3. links to it from the UI.
 
-### **3. Scalability: Multi-Measure Support** ⏱️ 1 hour
-**Issue:** CLI currently optimized for single measure runs.
-**Goal:** `python main.py --measures PSA,WCC`
-**Plan:**
-1. Update `main.py` argument parsing.
-2. Loop through measures.
-3. Consolidated reporting.
+### **3. Scalability: Multi-Measure Support** 🏆
+- **CLI:** Updated `main.py` to process comma-separated measures.
+- **Universal Schema:** Validator and Engine now use standard schema mapping.
+
+### **4. Enterprise Polish: Live Dashboard & Smart Validation** 🏆
+- **Live Progress:** Added real-time tracking via SSE (Server-Sent Events) in the UI.
+- **Smart Validator:** Refactored `src/validator.py` to be universal-aware, checking dynamic events and exclusions.
 
 ---
 

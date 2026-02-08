@@ -4,16 +4,25 @@ from datetime import datetime, timedelta
 from faker import Faker
 
 class MockupEngine:
-    def __init__(self, measure_config_path, schema_map_path, vsd_manager=None):
+    def __init__(self, measure_config_path, schema_path, vsd_manager=None, year=2026, measure_name_override=None):
         with open(measure_config_path, 'r') as f:
             self.measure = yaml.safe_load(f)
-        with open(schema_map_path, 'r') as f:
+        
+        with open(schema_path, 'r') as f:
             self.schema = yaml.safe_load(f)
             
-        self.vsd_manager = vsd_manager
-        self.year = 2026 # Default for MY 2026
-        self.anchor_date = datetime(self.year, 12, 31)
+        # ⚡ Dynamic Schema Prefixing: Replace {MEASURE} with actual measure name
+        measure_name = measure_name_override if measure_name_override else self.measure.get('measure_name', 'PSA')
+        for table_key in self.schema['tables']:
+            table_name = self.schema['tables'][table_key]['name']
+            if '{MEASURE}' in table_name:
+                self.schema['tables'][table_key]['name'] = table_name.format(MEASURE=measure_name)
+                
+        self.year = year
         self.fake = Faker()
+        self.vsd_manager = vsd_manager
+        
+        print(f"MockupEngine initialized for {measure_name} (MY {year})")
         
         # Product Line Mapping (Unified)
         self.pl_map = {
@@ -191,50 +200,104 @@ class MockupEngine:
         target_table = self.schema['tables']['visit']
         rows = []
         
-        # If no explicit spans, default to single IP visit
+        # If no explicit spans, default to single Outpatient visit
         if not spans:
+            spans = [{'date': datetime(self.year, 2, 1), 'type': 'Outpatient'}]
+            
+        for i, v in enumerate(spans):
+            d = self.parse_date_str(v['date'])
+            v_type = v.get('type', 'Outpatient')
+            
+            # ⚡ Dynamic Code Selection based on Visit Type
+            cpt_code = "99213"  # Default Outpatient
+            diag_code = "Z00.00"
+            pos_code = "11"     # Office
+            
+            if "Inpatient" in v_type:
+                cpt_code = "99221"
+                pos_code = "21" # Inpatient Hospital
+            elif "ED" in v_type or "Emergency" in v_type:
+                cpt_code = "99281"
+                pos_code = "23" # Emergency Room
+            elif "Telehealth" in v_type:
+                pos_code = "02" # Telehealth
+            
+            if self.vsd_manager:
+                # 1. Try to find CPT code matching the visit type
+                vsd_cpt = self.vsd_manager.get_random_code_from_pattern(v_type)
+                if not vsd_cpt and "Outpatient" not in v_type:
+                    vsd_cpt = self.vsd_manager.get_random_code_from_pattern("Outpatient")
+                if vsd_cpt: cpt_code = vsd_cpt
+                
+                # 2. Try to get a relevant diagnosis code
+                vsd_diag = self.vsd_manager.get_random_code_from_pattern("Diagnosis")
+                if vsd_diag: diag_code = vsd_diag
+
             rows.append({
                 target_table['fk']: mem_id,
-                target_table['pk']: f"C_{mem_id}_01",
-                target_table['fields']['date']: datetime(self.year, 2, 1),
-                target_table['fields']['pos']: '11', # Office Visit
-                "CPT_1": "99213" 
+                target_table['pk']: f"C_{mem_id}_{i+1:02d}",
+                target_table['fields']['date']: d,
+                target_table['fields']['pos']: pos_code,
+                "CPT_1": cpt_code,
+                "DIAG_I_1": diag_code
             })
-        else:
-            for i, v in enumerate(spans):
-                 d = self.parse_date_str(v['date'])
-                 rows.append({
-                    target_table['fk']: mem_id,
-                    target_table['pk']: f"C_{mem_id}_{i+1:02d}",
-                    target_table['fields']['date']: d,
-                    target_table['fields']['pos']: '11',
-                    "CPT_1": "99213" 
-                })
         
         return target_table['name'], rows
 
     def generate_clinical_event(self, mem_id, component_name, is_compliant=True, offset_days=0, overrides=None):
         # Locate component in measure config
         component = next((c for c in self.measure['rules']['clinical_events']['numerator_components'] if c['name'] == component_name), None)
-        if not component:
-            return None, None
         
-        table_raw = component['table'] # e.g. PSA_LAB_IN
-        table_key = table_raw.replace('PSA_', '').replace('_IN', '').lower()
+        if component:
+            table_key = component['table'] # e.g. "lab", "visit"
+        else:
+            # ⚡ Universal Support: Smart-default table based on name
+            table_key = 'visit'
+            if "BMI" in component_name or "Weight" in component_name:
+                table_key = 'emr'
+            elif "PSA" in component_name or "Lab" in component_name:
+                table_key = 'lab'
+                
+            # Create a dummy component for logic below
+            component = {
+                'name': component_name,
+                'table': table_key,
+                'value_set_names': [component_name] # Fallback
+            }
+
         if table_key not in self.schema['tables']:
-            # Fallback if names don't match exactly
-            if 'VISIT' in table_raw: table_key = 'visit'
-            elif 'EMR' in table_raw: table_key = 'emr'
-            elif 'LAB' in table_raw: table_key = 'lab'
+            # Fallback for old configs that might still use PSA_...
+            table_raw = table_key.replace('PSA_', '').replace('_IN', '').lower()
+            if 'VISIT' in table_raw.upper(): table_key = 'visit'
+            elif 'EMR' in table_raw.upper(): table_key = 'emr'
+            elif 'LAB' in table_raw.upper(): table_key = 'lab'
             else: table_key = 'visit'
 
         target_table = self.schema['tables'][table_key]
         event_date = datetime(self.year, 6, 1) + timedelta(days=offset_days)
         
+        # ⚡ Apply Overrides from Scenario (Universal Format support)
+        specific_code = None
+        specific_value = None
+        if overrides and 'events' in overrides and component_name in overrides['events']:
+            meta = overrides['events'][component_name]
+            if 'date' in meta:
+                try:
+                    event_date = self.parse_date_str(meta['date'])
+                except:
+                    pass
+            if 'code' in meta:
+                specific_code = meta['code']
+            if 'value' in meta:
+                specific_value = meta['value']
+
         row = {
             target_table['fk'] if 'fk' in target_table else target_table['pk']: mem_id,
             target_table['fields']['date']: event_date
         }
+        
+        if specific_code:
+            row['_CODE'] = specific_code # Mark it for later use
 
         # Add specific values for compliance
         if is_compliant:
@@ -243,42 +306,70 @@ class MockupEngine:
             if self.vsd_manager and component.get('value_set_names'):
                 vs_name = component['value_set_names'][0]
                 vsd_code = self.vsd_manager.get_random_code(vs_name)
-                # Store metadata for compliance checking
-                row['_CODE'] = vsd_code
                 row['_VALUE_SET_NAME'] = vs_name
+            
+            # ⚡ Priority: 1. Manual override from Excel 2. VSD code 3. Placeholder
+            final_code = specific_code if specific_code else vsd_code
+            if final_code:
+                row['_CODE'] = final_code
+                
+                # Use as main code if column exists
+                if table_key == 'lab':
+                    row[target_table['fields']['cpt']] = final_code
+                elif table_key == 'visit':
+                    row["CPT_1"] = final_code
             else:
                 row['_CODE'] = 'MANUAL'
+            
+            # Add a realistic diagnosis if it's a visit
+            if table_key == 'visit' and self.vsd_manager:
+                diag = self.vsd_manager.get_random_code_from_pattern("Diagnosis")
+                if diag: row["DIAG_I_1"] = diag
                 row['_VALUE_SET_NAME'] = 'MANUAL'
 
             if component_name == "BMI Percentile":
-                row[target_table['fields']['bmi_percentile']] = 85
+                row[target_table['fields']['bmi_percentile']] = specific_value if specific_value is not None else 85
             elif "Counseling" in component_name:
-                code = vsd_code if vsd_code else ('Z71.3' if "Nutrition" in component_name else '97802')
+                code = final_code if final_code else ('Z71.3' if "Nutrition" in component_name else 'Z71.89')
                 target_field = target_table['fields'].get('procedure_codes', ['CPT_1'])[0]
                 row[target_field] = code
                 if not row.get('_CODE'): row['_CODE'] = code # Fallback
             elif component_name == "PSA Test":
-                row[target_table['fields'].get('cpt', 'LAB_CPT')] = vsd_code if vsd_code else '84153'
-                row[target_table['fields'].get('value', 'LAB_VALUE')] = '1.0'
-            elif vsd_code:
-                # Catch-all for other components if we found a VSD code
+                row[target_table['fields'].get('cpt', 'LAB_CPT')] = final_code if final_code else '84153'
+                row[target_table['fields'].get('value', 'LAB_VALUE')] = specific_value if specific_value is not None else '1.0'
+            elif final_code:
+                # Catch-all for other components if we found a code
                 code_field = target_table['fields'].get('procedure_codes', [target_table['fields'].get('cpt', 'CPT_1')])[0]
-                row[code_field] = vsd_code
+                row[code_field] = final_code
         
         if overrides:
             for f, v in overrides.items():
                 if f in row: row[f] = v
 
-        return table_raw, row
+        return target_table['name'], row
 
     def generate_exclusion(self, mem_id, exclusion_name, overrides=None):
         # Find exclusion in config
         exclusion = next((e for e in self.measure['rules']['exclusions'] if e['name'] == exclusion_name), None)
+        
         if not exclusion:
-            return None, None
+            # ⚡ Universal Support: Default to 'visit' for unknown exclusions
+            exclusion = {
+                'name': exclusion_name,
+                'value_set_names': [exclusion_name]
+            }
             
         event_date = datetime(self.year, 3, 15) # Early year exclusion
         
+        # ⚡ Apply Overrides from Scenario (Universal Format support)
+        if overrides and 'exclusions' in overrides and exclusion_name in overrides['exclusions']:
+            meta = overrides['exclusions'][exclusion_name]
+            if 'date' in meta:
+                try:
+                    event_date = self.parse_date_str(meta['date'])
+                except:
+                    pass
+
         # Try to get code from VSD
         vsd_code = None
         if self.vsd_manager and exclusion.get('value_set_names'):
@@ -297,15 +388,12 @@ class MockupEngine:
                     if f in row or f == 'HOSPICE': row[target_table['fields']['hospice_flag']] = v
             return target_table['name'], row
             
-        elif exclusion_name == "Pregnancy" or exclusion_name == "Prostate Cancer":
-            # Per spec: usually Visit table with diagnosis code
-            target_table = self.schema['tables']['visit']
-            code = vsd_code if vsd_code else ('O09.212' if exclusion_name == "Pregnancy" else 'C61')
-            row = {
-                target_table['fk']: mem_id,
-                target_table['fields']['date']: event_date,
-                target_table['fields']['diagnosis_codes'][0]: code
-            }
-            return target_table['name'], row
-            
-        return None, None
+        # Default Catch-all for exclusions (Universal support)
+        target_table = self.schema['tables']['visit']
+        code = vsd_code if vsd_code else 'Z00.00'
+        row = {
+            target_table['fk']: mem_id,
+            target_table['fields']['date']: event_date,
+            target_table['fields']['diagnosis_codes'][0]: code
+        }
+        return target_table['name'], row

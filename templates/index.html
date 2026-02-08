@@ -66,6 +66,7 @@
         }
 
         select,
+        input[type="text"],
         input[type="file"] {
             width: 100%;
             padding: 12px;
@@ -76,6 +77,7 @@
         }
 
         select:focus,
+        input[type="text"]:focus,
         input[type="file"]:focus {
             outline: none;
             border-color: #667eea;
@@ -257,6 +259,12 @@
     </div>
 
     <div class="container">
+        <div style="float: right;">
+            <a href="/download_template" class="btn-info"
+                style="text-decoration: none; font-size: 0.9em; background: #e7f3ff; padding: 8px 15px; border-radius: 20px; color: #004085; border: 1px solid #b8daff;">
+                📥 Download Template
+            </a>
+        </div>
         <h1>🏥 HEDIS Mockup Generator</h1>
 
         <!-- Messages -->
@@ -284,11 +292,8 @@
 
                 <div class="form-group">
                     <label>Measure:</label>
-                    <select name="measure" style="padding: 8px; border-radius: 4px;">
-                        <option value="PSA">PSA</option>
-                        <option value="WCC">WCC</option>
-                        <option value="IMA">IMA</option>
-                    </select>
+                    <input type="text" name="measure" value="PSA" placeholder="e.g. ABA, BCS, PSA"
+                        style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; width: 200px; font-weight: bold; color: #17a2b8;">
                 </div>
 
                 <button type="submit" name="action" value="convert" class="btn-reformat" style="background: #17a2b8;">
@@ -303,11 +308,8 @@
 
                 <div class="form-group">
                     <label for="measure">Select Measure</label>
-                    <select name="measure" id="measure">
-                        <option value="PSA">PSA - Prostate Cancer Screening</option>
-                        <option value="WCC">WCC - Weight Assessment & Counseling</option>
-                        <option value="IMA">IMA - Immunizations for Adolescents</option>
-                    </select>
+                    <input type="text" name="measure" id="measure" value="PSA"
+                        placeholder="Enter Measure Code (e.g. ABA, WCC, PSA)" required>
                 </div>
 
                 <div class="form-group">
@@ -418,6 +420,38 @@
             const progressInfo = document.getElementById('progressInfo');
             const buttons = document.querySelectorAll('button[type="submit"]');
 
+            // Progress tracking
+            let eventSource = null;
+
+            function startProgressTracking() {
+                if (eventSource) eventSource.close();
+
+                eventSource = new EventSource('/progress');
+                eventSource.onmessage = function (event) {
+                    const data = JSON.parse(event.data);
+                    if (data.status) {
+                        document.getElementById('statusText').textContent = data.status;
+                    }
+                    if (data.member_count !== undefined) {
+                        document.getElementById('memberCount').textContent = data.member_count;
+                    }
+                    if (data.details) {
+                        loadingSubtext.textContent = data.details;
+                    }
+
+                    // If complete, we could close, but the page will redirect anyway
+                    if (data.status.includes("complete") || data.status.includes("Success")) {
+                        // Keep open for a second so user sees it
+                        setTimeout(() => eventSource.close(), 2000);
+                    }
+                };
+
+                eventSource.onerror = function () {
+                    console.error("EventSource failed.");
+                    eventSource.close();
+                };
+            }
+
             buttons.forEach(button => {
                 button.addEventListener('click', function (e) {
                     const action = this.value;
@@ -433,41 +467,19 @@
                         loadingText.textContent = '🔄 Reformatting Test Cases...';
                         loadingSubtext.textContent = 'AI is analyzing and cleaning your data';
                         progressInfo.style.display = 'block';
-                        document.getElementById('statusText').textContent = 'Reading test cases...';
                     } else if (action === 'convert') {
                         loadingText.textContent = '🔄 Converting PDF...';
                         loadingSubtext.textContent = 'Parsing NCQA specification to YAML';
                         progressInfo.style.display = 'block';
-                        document.getElementById('statusText').textContent = 'Extracting rules...';
                     } else if (action === 'generate') {
                         loadingText.textContent = '🚀 Generating Mockup...';
                         loadingSubtext.textContent = 'Processing scenarios and creating data tables';
                         progressInfo.style.display = 'block';
-                        document.getElementById('statusText').textContent = 'Initializing VSD and parser...';
-
-                        // Simulate progress updates (in real implementation, use WebSockets or polling)
-                        setTimeout(() => {
-                            document.getElementById('statusText').textContent = 'Parsing scenarios...';
-                        }, 2000);
-
-                        setTimeout(() => {
-                            document.getElementById('memberCount').textContent = '50+';
-                            document.getElementById('recordCount').textContent = '200+';
-                            document.getElementById('statusText').textContent = 'Generating enrollment data...';
-                        }, 5000);
+                        startProgressTracking();
                     } else if (action === 'validate') {
                         loadingText.textContent = '✅ Validating Results...';
                         loadingSubtext.textContent = 'Checking compliance against test case expectations';
                         progressInfo.style.display = 'block';
-                        document.getElementById('statusText').textContent = 'Loading mockup data...';
-
-                        setTimeout(() => {
-                            document.getElementById('statusText').textContent = 'Validating enrollment...';
-                        }, 2000);
-
-                        setTimeout(() => {
-                            document.getElementById('statusText').textContent = 'Checking numerator events...';
-                        }, 4000);
                     }
                 });
             });

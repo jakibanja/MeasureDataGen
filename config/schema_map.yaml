@@ -4,7 +4,7 @@
 tables:
   # Member Demographics
   member:
-    name: "PSA_MEMBER_IN"
+    name: "{MEASURE}_MEMBER_IN"
     pk: "MEM_NBR"
     fields:
       dob: "MEM_DOB"
@@ -23,7 +23,7 @@ tables:
 
   # Enrollment & Benefits
   enrollment:
-    name: "PSA_ENROLLMENT_IN"
+    name: "{MEASURE}_ENROLLMENT_IN"
     pk: "MEM_NBR"
     fields:
       start_date: "ENR_START"
@@ -33,7 +33,7 @@ tables:
 
   # Medical Claims / Visits
   visit:
-    name: "PSA_VISIT_IN"
+    name: "{MEASURE}_VISIT_IN"
     pk: "CLAIM_ID"
     fk: "MEM_NBR"
     fields:
@@ -46,7 +46,7 @@ tables:
   
   # Clinical Observations (EMR)
   emr:
-    name: "PSA_EMR_IN"
+    name: "{MEASURE}_EMR_IN"
     pk: "EMR_RECORD_NUMBER"
     fk: "MEM_NBR"
     fields:
@@ -61,7 +61,7 @@ tables:
 
   # Monthly Membership Flags (Hospice, LIS)
   monthly_membership:
-    name: "PSA_MONTHLY_MBR_IN"
+    name: "{MEASURE}_MONTHLY_MBR_IN"
     fk: "MEM_NBR"
     fields:
       run_date: "RUN_DT"
@@ -69,7 +69,7 @@ tables:
 
   # Pharmacy Claims
   pharmacy:
-    name: "PSA_RX_IN"
+    name: "{MEASURE}_RX_IN"
     fk: "MEM_NBR"
     fields:
       date: "RX_SERV_DT"
@@ -79,7 +79,7 @@ tables:
 
   # Laboratory Results
   lab:
-    name: "PSA_LAB_IN"
+    name: "{MEASURE}_LAB_IN"
     fk: "MEM_NBR"
     fields:
       date: "LAB_SCR_DT"

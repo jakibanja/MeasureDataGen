@@ -52,68 +52,35 @@ This document defines the **universal standard format** for ALL HEDIS test case 
 | `VISIT_2_TYPE` | Second visit type | `Outpatient` | Text (optional) |
 | ... | Up to 10 visits | ... | ... |
 
-### **Clinical Event Columns (Universal for ALL measures):**
+### **Clinical Event Columns (Universal - Preferred):**
 
-Instead of measure-specific columns (PSA_TEST, BMI_PERCENTILE, etc.), use **generic EVENT columns** that work for any measure:
+Instead of measure-specific columns, use generic **EVENT** columns. This allows the system to handle ANY measure (PSA, WCC, BCS, COL, etc.) without code changes.
 
-| Column Name | Description | Example | Format |
-|-------------|-------------|---------|--------|
-| `EVENT_1_NAME` | Name of clinical event | `PSA Test`, `BMI Percentile`, `Immunization` | Text |
-| `EVENT_1_VALUE` | Value/result (1=yes, 0=no, or numeric) | `1`, `85`, `Y` | Text/Number |
-| `EVENT_1_DATE` | Event date | `6/1/2026` | Date (optional) |
-| `EVENT_1_CODE` | Clinical code (CPT, LOINC, CVX, etc.) | `84153`, `Z68.52` | Code (optional) |
-| `EVENT_2_NAME` | Second clinical event | `Hospice`, `Nutrition Counseling` | Text (optional) |
-| `EVENT_2_VALUE` | Second event value | `1`, `Y` | Text/Number (optional) |
-| `EVENT_2_DATE` | Second event date | `3/15/2026` | Date (optional) |
-| ... | Up to 10 clinical events | ... | ... |
-
-**Examples for different measures:**
-
-**PSA Measure:**
-- `EVENT_1_NAME` = `PSA Test`, `EVENT_1_VALUE` = `1`, `EVENT_1_DATE` = `6/1/MY`
-- `EVENT_2_NAME` = `Hospice`, `EVENT_2_VALUE` = `1`
-- `EVENT_3_NAME` = `Prostate Cancer`, `EVENT_3_VALUE` = `0`
-
-**WCC Measure:**
-- `EVENT_1_NAME` = `BMI Percentile`, `EVENT_1_VALUE` = `85`
-- `EVENT_2_NAME` = `Nutrition Counseling`, `EVENT_2_VALUE` = `1`, `EVENT_2_DATE` = `3/1/MY`
-- `EVENT_3_NAME` = `Physical Activity Counseling`, `EVENT_3_VALUE` = `1`
-
-**IMA Measure:**
-- `EVENT_1_NAME` = `DTaP Immunization`, `EVENT_1_VALUE` = `1`, `EVENT_1_CODE` = `90700`
-- `EVENT_2_NAME` = `IPV Immunization`, `EVENT_2_VALUE` = `1`, `EVENT_2_CODE` = `90713`
+| Column Name | Description | Example | 
+|-------------|-------------|---------|
+| `EVENT_1_NAME` | Name of event (must match Measure config) | `PSA Test`, `BMI Percentile`, `Lab` |
+| `EVENT_1_VALUE` | Result (1, Y, or numeric like 85) | `1` |
+| `EVENT_1_DATE` | Date of clinical event | `6/1/2026` |
+| `EVENT_1_CODE` | Explicit code (CPT, LOINC) | `84153` |
+| ... | Up to 10 events | ... |
 
 ### **Exclusion Columns (Universal):**
 
-| Column Name | Description | Example | Format |
-|-------------|-------------|---------|--------|
-| `EXCLUSION_1_NAME` | Name of exclusion | `Hospice`, `Pregnancy`, `Deceased` | Text |
-| `EXCLUSION_1_VALUE` | Exclusion present (1=yes, 0=no) | `1`, `Y` | Text/Number |
-| `EXCLUSION_1_DATE` | Exclusion date | `3/15/2026` | Date (optional) |
-| `EXCLUSION_2_NAME` | Second exclusion | `Prostate Cancer` | Text (optional) |
-| `EXCLUSION_2_VALUE` | Second exclusion value | `1` | Text/Number (optional) |
-| ... | Up to 5 exclusions | ... | ... |
-
-### **Optional Metadata Columns:**
-
 | Column Name | Description | Example |
 |-------------|-------------|---------|
-| `SCENARIO_DESCRIPTION` | Human-readable description | `Member with PSA test in MY` |
-| `EXPECTED_RESULT` | Expected compliance result | `Compliant`, `Not Compliant`, `Excluded` |
-| `TEST_OBJECTIVE` | What this test case validates | `Verify PSA test detection` |
+| `EXCLUSION_1_NAME` | Name of exclusion | `Hospice`, `Pregnancy` |
+| `EXCLUSION_1_VALUE` | Present? (1, Y) | `1` |
+| `EXCLUSION_1_DATE` | Exclusion date | `3/15/2026` |
 
 ---
 
-## 📝 Example: Standard Format
+## 📝 Example: Universal Standard Format
 
-```
-MEMBER_ID          | AGE | GENDER | PRODUCT_LINE | ENROLLMENT_1_START | ENROLLMENT_1_END | ENROLLMENT_2_START | ENROLLMENT_2_END | VISIT_1_DATE | VISIT_2_DATE | PSA_TEST | HOSPICE | EXPECTED_RESULT
--------------------|-----|--------|--------------|--------------------|--------------------|--------------------|--------------------|--------------|--------------|----------|---------|----------------
-PSA_CE_01          | 70  | M      | Medicare     | 1/1/MY-1           | 12/31/MY           |                    |                    | 2/1/MY       |              | 1        | 0       | Compliant
-PSA_CE_02          | 72  | M      | Medicare     | 1/1/MY-1           | 10/1/MY            | 11/14/MY           | 12/31/MY           | 2/1/MY       |              | 1        | 0       | Compliant
-PSA_HOSPICE_01     | 68  | M      | Medicare     | 1/1/MY             | 12/31/MY           |                    |                    | 2/1/MY       |              | 1        | 1       | Excluded
-PSA_MULTI_VISIT_01 | 75  | M      | Commercial   | 1/1/MY             | 12/31/MY           |                    |                    | 2/1/MY       | 6/15/MY      | 1        | 0       | Compliant
-```
+| MEMBER_ID | AGE | GENDER | PRODUCT_LINE | ENROLLMENT_1_START | ENROLLMENT_1_END | EVENT_1_NAME | EVENT_1_VALUE | EXPECTED_RESULT |
+|-----------|-----|--------|--------------|--------------------|------------------|--------------|---------------|-----------------|
+| PSA_01    | 70  | M      | Medicare     | 1/1/2026           | 12/31/2026       | PSA Test     | 1             | Compliant       |
+| WCC_01    | 5   | F      | Commercial   | 1/1/2026           | 12/31/2026       | BMI Percentile| 85            | Compliant       |
+| ABA_01    | 18  | M      | Medicaid     | 1/1/2026           | 12/31/2026       | HbA1c Lab    | 1             | Compliant       |
 
 ---
 

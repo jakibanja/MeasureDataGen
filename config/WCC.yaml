@@ -14,7 +14,7 @@ rules:
     - event: "Outpatient Visit"
       value_set_names: ["Outpatient"]
       provider_types: ["PCP", "OB/GYN"]
-      table: "PSA_VISIT_IN"
+      table: "visit"
 
   exclusions:
     - name: "Hospice"
@@ -29,15 +29,15 @@ rules:
     numerator_components:
       - name: "BMI Percentile"
         value_set_names: ["BMI Percentile"]
-        table: "PSA_EMR_IN"
+        table: "emr"
         requirement: "Documentation of percentile (value or plotted)"
       - name: "Nutrition Counseling"
         value_set_names: ["Nutrition Counseling"]
         specific_codes: ["Z71.3"]
-        table: "PSA_VISIT_IN"
+        table: "visit"
       - name: "Physical Activity Counseling"
         value_set_names: ["Physical Activity Counseling", "Encounter for Physical Activity Counseling"]
-        table: "PSA_VISIT_IN"
+        table: "visit"
 
 stratifications:
   - name: "3-11 years"

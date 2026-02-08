@@ -161,20 +161,36 @@ class VSDManager:
         
         return str(codes[0]) if codes else None
     
-    def validate_value_set(self, value_set_name):
+    def find_value_sets(self, pattern, filter_empty=True):
         """
-        Validate a value set and return statistics.
+        Find value set names that match a pattern.
         
+        Args:
+            pattern: String or regex pattern to search for in Value Set Names
+            filter_empty: If True, only return value sets that have valid codes
+            
         Returns:
-            dict with total codes, valid codes, invalid codes
+            list: Matching value set names
         """
-        all_codes = self.get_codes(value_set_name, validate_dates=False)
-        valid_codes = self.get_codes(value_set_name, validate_dates=True)
+        from re import search
         
-        return {
-            'value_set_name': value_set_name,
-            'total_codes': len(all_codes),
-            'valid_codes': len(valid_codes),
-            'invalid_codes': len(all_codes) - len(valid_codes),
-            'validity_rate': (len(valid_codes) / len(all_codes) * 100) if all_codes else 0
-        }
+        all_names = self.df['Value Set Name'].unique()
+        matches = [name for name in all_names if search(pattern, name, flags=2)] # Case-insensitive
+        
+        if filter_empty:
+            matches = [name for name in matches if self.get_codes(name)]
+            
+        return matches
+
+    def get_random_code_from_pattern(self, pattern, validate_dates=True):
+        """
+        Search for a value set matching a pattern and return a random code from it.
+        Useful for generic needs like 'Outpatient' or 'Diagnosis'.
+        """
+        matches = self.find_value_sets(pattern)
+        if not matches:
+            return None
+            
+        # Prioritize shorter names as they are often more 'generic'
+        matches.sort(key=len)
+        return self.get_random_code(matches[0], validate_dates=validate_dates)

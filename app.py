@@ -1,10 +1,23 @@
-from flask import Flask, request, render_template, send_file, redirect, url_for, flash
+from flask import Flask, request, render_template, send_file, redirect, url_for, flash, Response, stream_with_context
 import os
+import json
+import time
 from main import run_measure_gen_custom
 from src.reformatter import TestCaseReformatter
+from src.progress import progress_tracker
 
 app = Flask(__name__)
 app.secret_key = 'hedis_mockup_secret_key_2026'
+
+@app.route('/progress')
+def progress():
+    def generate():
+        while True:
+            # Yield progress data as SSE
+            data = json.dumps(progress_tracker.progress)
+            yield f"data: {data}\n\n"
+            time.sleep(0.5)
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 # Folder Configuration
 UPLOAD_FOLDER = 'uploads'      # Temporary uploads
@@ -199,7 +212,15 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/convert_ncqa', methods=['POST'])
+@app.route('/download_template')
+def download_template():
+    """Download the standard test case template."""
+    template_path = 'templates/Standard_TestCase_Template.xlsx'
+    if os.path.exists(template_path):
+        return send_file(template_path, as_attachment=True, download_name='Standard_TestCase_Template.xlsx')
+    else:
+        flash("❌ Template file not found.", "error")
+        return redirect(url_for('index'))
 def convert_ncqa():
     """Convert uploaded NCQA PDF to YAML"""
     if 'ncqa_pdf' not in request.files:
