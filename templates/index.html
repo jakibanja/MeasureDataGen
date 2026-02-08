@@ -314,11 +314,25 @@
 
                 <div class="form-group">
                     <label for="model_name">🤖 AI Model (Ollama)</label>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                        <span class="model-tag" onclick="document.getElementById('model_name').value='qwen2:0.5b'"
+                            style="cursor: pointer; background: #e7f3ff; padding: 4px 10px; border-radius: 15px; font-size: 0.8em; border: 1px solid #b8daff; color: #004085;">⚡
+                            Fast: qwen2:0.5b</span>
+                        <span class="model-tag" onclick="document.getElementById('model_name').value='llama3'"
+                            style="cursor: pointer; background: #e7f3ff; padding: 4px 10px; border-radius: 15px; font-size: 0.8em; border: 1px solid #b8daff; color: #004085;">🧠
+                            Balanced: llama3</span>
+                        <span class="model-tag" onclick="document.getElementById('model_name').value='biomistral'"
+                            style="cursor: pointer; background: #fff3cd; padding: 4px 10px; border-radius: 15px; font-size: 0.8em; border: 1px solid #ffeeba; color: #856404;">🏥
+                            Medical: biomistral</span>
+                        <span class="model-tag" onclick="document.getElementById('model_name').value='meditron'"
+                            style="cursor: pointer; background: #fff3cd; padding: 4px 10px; border-radius: 15px; font-size: 0.8em; border: 1px solid #ffeeba; color: #856404;">🧬
+                            Clinical: meditron</span>
+                    </div>
                     <input type="text" name="model_name" id="model_name" value="qwen2:0.5b"
-                        placeholder="e.g. qwen2:0.5b, llama3, mistral">
+                        placeholder="e.g. qwen2:0.5b, llama3, biomistral">
                     <div class="info-box">
-                        💡 Specify the Ollama model to use for AI extraction. Common options: <code>qwen2:0.5b</code>
-                        (fast), <code>llama3</code>, <code>mistral</code>.
+                        💡 <strong>Medical Models</strong> (biomistral, meditron) are recommended for complex clinical
+                        notes. Ensure you have run <code>ollama pull [model]</code> first.
                     </div>
                 </div>
 

@@ -8,7 +8,11 @@ Ensure the following are installed:
 *   **Git**
 *   **Ollama** (Required for AI Scenario Extraction)
     *   Download from: [ollama.com](https://ollama.com/)
-    *   Open terminal and run: `ollama pull qwen2:0.5b` (or your preferred small model)
+    *   **Recommended Models:**
+        *   `ollama pull qwen2:0.5b` (Fastest, good for basic extraction)
+        *   `ollama pull llama3` (Balanced performance/accuracy)
+        *   `ollama pull biomistral` (Specialized 🩺 Medical model)
+        *   `ollama pull meditron` (High-fidelity 🏥 Clinical reasoning)
 
 ## 2. Clone and Setup Environment
 ```powershell
