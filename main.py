@@ -15,7 +15,7 @@ load_dotenv()
 _vsd_cache = {}
 _ai_extractor_cache = None
 
-def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_check=False, disable_ai=None, validate_ncqa=False):
+def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_check=False, disable_ai=None, validate_ncqa=False, model_name="qwen2:0.5b"):
     """
     Core function for running measure generation with explicit paths.
     Returns the path to the generated output file.
@@ -26,6 +26,7 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
         vsd_path: Path to VSD Excel file
         skip_quality_check: If True, skips quality checks for faster generation
         disable_ai: If True, skips AI Extractor (faster). If None, checks DISABLE_AI_EXTRACTOR env var
+        model_name: Name of the Ollama model to use
     """
     start_time = time.time()
     measure_name = measure_name.upper()
@@ -64,19 +65,18 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
     else:
         try:
             from src.ai_extractor import AIScenarioExtractor
-            if _ai_extractor_cache is None:
-                print("🤖 Initializing AI Extractor (first time only, this may take 5-15 seconds)...")
-                print("   💡 Tip: Set DISABLE_AI_EXTRACTOR=true to skip this and use regex-only mode")
+            # If cache exists but is a different model, we must re-initialize
+            needs_init = _ai_extractor_cache is None or _ai_extractor_cache == "FAILED"
+            if not needs_init and hasattr(_ai_extractor_cache, 'model_name') and _ai_extractor_cache.model_name != model_name:
+                print(f"🔄 Switching AI model from {_ai_extractor_cache.model_name} to {model_name}...")
+                needs_init = True
+
+            if needs_init:
+                print(f"🤖 Initializing AI Extractor with model '{model_name}' (this may take 5-15 seconds)...")
                 ai_load_start = time.time()
                 
-                # Add timeout to prevent hanging
-                import signal
-                def timeout_handler(signum, frame):
-                    raise TimeoutError("AI Extractor initialization timed out")
-                
-                # Set 30 second timeout (Windows doesn't support signal.alarm, so we'll use a different approach)
                 try:
-                    _ai_extractor_cache = AIScenarioExtractor(model_name="tinyllama")
+                    _ai_extractor_cache = AIScenarioExtractor(model_name=model_name)
                     print(f"   ✓ AI Extractor loaded in {time.time() - ai_load_start:.2f}s")
                 except Exception as init_error:
                     print(f"   ❌ AI Extractor failed to initialize: {init_error}")
@@ -85,7 +85,7 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
             elif _ai_extractor_cache == "FAILED":
                 print("⚡ AI Extractor previously failed, using regex-only mode")
             else:
-                print("⚡ Using cached AI Extractor (instant!)")
+                print(f"⚡ Using cached AI Extractor with model '{model_name}'")
                 extractor = _ai_extractor_cache
         except Exception as e:
             print(f"⚠️  AI Extractor initialization failed (running in regex-only mode): {e}")
@@ -372,6 +372,7 @@ if __name__ == "__main__":
     parser.add_argument('--testcase', help='Path to test case file')
     parser.add_argument('--vsd', help='Path to VSD file')
     parser.add_argument('--no-ai', action='store_true', help='Disable AI extractor')
+    parser.add_argument('--model', default='qwen2:0.5b', help='Ollama model name')
     
     args = parser.parse_args()
     
@@ -391,5 +392,6 @@ if __name__ == "__main__":
             measure, 
             tc_path, 
             vsd_path, 
-            disable_ai=args.no_ai
+            disable_ai=args.no_ai,
+            model_name=args.model
         )

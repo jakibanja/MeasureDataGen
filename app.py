@@ -34,8 +34,9 @@ DEFAULT_VSD = os.getenv('VSD_PATH', 'data/VSD_MY2026.xlsx')
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        # 1. Get measure selection
+        # 1. Get measure selection & model preference
         measure = request.form.get('measure', 'PSA')
+        model_name = request.form.get('model_name', 'qwen2:0.5b')
         
         # 2. Handle Test Case Upload
         tc_path = None
@@ -82,9 +83,9 @@ def index():
         # 3.6. Handle Auto-Reformat (if checkbox is checked and file was uploaded)
         auto_reformat = request.form.get('auto_reformat')
         if auto_reformat and 'testcase_file' in request.files and request.files['testcase_file'].filename:
-            flash(f"🔄 Auto-reformatting {measure} test case...", "info")
+            flash(f"🔄 Auto-reformatting {measure} test case using {model_name}...", "info")
             try:
-                reformatter = TestCaseReformatter()
+                reformatter = TestCaseReformatter(model_name=model_name)
                 clean_path = reformatter.reformat_file(tc_path)
                 tc_path = clean_path  # Use cleaned version
                 flash(f"✅ Auto-reformat complete!", "success")
@@ -95,9 +96,9 @@ def index():
         action = request.form.get('action')
         
         if action == 'reformat':
-            flash(f"🔄 Starting reformat for {measure}...", "info")
+            flash(f"🔄 Starting reformat for {measure} using {model_name}...", "info")
             try:
-                reformatter = TestCaseReformatter()
+                reformatter = TestCaseReformatter(model_name=model_name)
                 clean_path = reformatter.reformat_file(tc_path)
                 flash(f"✅ Reformat successful! Cleaned file saved to: {os.path.basename(clean_path)}", "success")
                 # Update tc_path to use cleaned version for future operations
@@ -123,6 +124,9 @@ def index():
                 # Show what options are enabled
                 if disable_ai:
                     flash(f"⚡ AI Extractor disabled (regex-only mode for faster generation)", "info")
+                else:
+                    flash(f"🤖 AI Extractor enabled using model: {model_name}", "info")
+                
                 if skip_quality_check:
                     flash(f"⚡ Quality checks skipped (faster generation)", "info")
                 if validate_ncqa:
@@ -135,7 +139,8 @@ def index():
                     vsd_path,
                     skip_quality_check=skip_quality_check,
                     disable_ai=disable_ai,
-                    validate_ncqa=validate_ncqa
+                    validate_ncqa=validate_ncqa,
+                    model_name=model_name
                 )
                 
                 if output_file and os.path.exists(output_file):

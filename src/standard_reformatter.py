@@ -23,13 +23,14 @@ class StandardTestCaseReformatter:
     - PSA_TEST, HOSPICE, etc. (measure-specific)
     """
     
-    def __init__(self, measure: str = 'PSA', use_ai: bool = False):
+    def __init__(self, measure: str = 'PSA', use_ai: bool = False, model_name: str = "qwen2:0.5b"):
         """
         Initialize reformatter.
         
         Args:
             measure: Measure name (PSA, WCC, IMA)
             use_ai: Whether to use AI for complex parsing (slower but more accurate)
+            model_name: Name of the Ollama model to use
         """
         self.measure = measure
         self.use_ai = use_ai
@@ -38,8 +39,8 @@ class StandardTestCaseReformatter:
         if use_ai:
             try:
                 from src.ai_extractor import AIScenarioExtractor
-                print("🤖 Initializing AI Extractor for reformatting...")
-                self.ai_extractor = AIScenarioExtractor(model_name="tinyllama")
+                print(f"🤖 Initializing AI Extractor with model '{model_name}' for reformatting...")
+                self.ai_extractor = AIScenarioExtractor(model_name=model_name)
             except Exception as e:
                 print(f"⚠️  AI Extractor failed to initialize: {e}")
                 print("   Continuing with regex-only mode")

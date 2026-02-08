@@ -5,10 +5,10 @@ class TestCaseReformatter:
     Wrapper for StandardTestCaseReformatter to maintain backward compatibility in app.py
     while providing the new Universal Standard Format output.
     """
-    def __init__(self, extractor=None):
+    def __init__(self, extractor=None, model_name="qwen2:0.5b"):
         # StandardTestCaseReformatter handles its own extractor initialization
         # We always use AI for reformatting to ensure maximum fidelity as requested
-        self.inner = StandardTestCaseReformatter(use_ai=True)
+        self.inner = StandardTestCaseReformatter(use_ai=True, model_name=model_name)
         
     def reformat_file(self, input_path, output_path=None):
         """

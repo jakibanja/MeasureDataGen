@@ -313,6 +313,16 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="model_name">🤖 AI Model (Ollama)</label>
+                    <input type="text" name="model_name" id="model_name" value="qwen2:0.5b"
+                        placeholder="e.g. qwen2:0.5b, llama3, mistral">
+                    <div class="info-box">
+                        💡 Specify the Ollama model to use for AI extraction. Common options: <code>qwen2:0.5b</code>
+                        (fast), <code>llama3</code>, <code>mistral</code>.
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label for="testcase_file">Test Case File (Excel)</label>
                     <input type="file" name="testcase_file" id="testcase_file" accept=".xlsx,.xls">
                     <div class="info-box">
