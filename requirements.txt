@@ -9,3 +9,4 @@ typing-extensions
 faker
 flask
 PyPDF2
+xlsxwriter
