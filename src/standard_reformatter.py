@@ -56,10 +56,11 @@ class StandardTestCaseReformatter:
             Path to standardized output file
         """
         if not output_path:
-            # Extract just the filename from input path
-            filename = os.path.basename(input_path)
-            # Save to data/ folder with same filename
-            output_path = os.path.join('data', filename)
+            # Extract filename and add _STANDARD suffix
+            base_name = os.path.basename(input_path)
+            name_without_ext = os.path.splitext(base_name)[0]
+            # Save to data/ folder with _STANDARD suffix
+            output_path = os.path.join('data', f'{name_without_ext}_STANDARD.xlsx')
         
         print(f"\n📋 Reformatting test case: {input_path}")
         print(f"   Output: {output_path}")

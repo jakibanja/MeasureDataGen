@@ -5,6 +5,7 @@ import time
 from dotenv import load_dotenv
 from src.engine import MockupEngine
 from src.parser import TestCaseParser
+from src.standard_parser import StandardFormatParser
 from src.vsd import VSDManager
 
 # Load environment variables from .env file
@@ -84,7 +85,16 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
             print(f"⚠️  AI Extractor initialization failed (running in regex-only mode): {e}")
             _ai_extractor_cache = "FAILED"
 
-    parser = TestCaseParser(testcase_path, extractor=extractor)
+    # ⚡ Auto-detect format and use appropriate parser
+    use_standard_parser = _is_standard_format(testcase_path)
+    
+    if use_standard_parser:
+        print("📋 Detected standard format - using StandardFormatParser")
+        parser = StandardFormatParser(testcase_path)
+    else:
+        print("📋 Detected legacy format - using TestCaseParser")
+        parser = TestCaseParser(testcase_path, extractor=extractor)
+    
     engine = MockupEngine(config_path, schema_path, vsd_manager=vsd_manager)
     
     result = _process_measure(measure_name, parser, engine, skip_quality_check=skip_quality_check)
@@ -93,6 +103,34 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
     print(f"\n⏱️  Total generation time: {total_time:.2f} seconds")
     
     return result
+
+def _is_standard_format(file_path):
+    """
+    Detect if test case file is in standard format.
+    
+    Returns True if:
+    - Filename contains '_STANDARD'
+    - File has single sheet with standard columns (MEMBER_ID, ENROLLMENT_1_START, etc.)
+    """
+    # Check filename
+    if '_STANDARD' in file_path.upper():
+        return True
+    
+    # Check file structure
+    try:
+        xl = pd.ExcelFile(file_path)
+        # Standard format has single sheet
+        if len(xl.sheet_names) == 1:
+            df = pd.read_excel(file_path, nrows=0)  # Just read headers
+            columns = set(df.columns)
+            # Check for standard format columns
+            standard_indicators = {'MEMBER_ID', 'ENROLLMENT_1_START', 'VISIT_1_DATE', 'EVENT_1_NAME'}
+            if standard_indicators.issubset(columns):
+                return True
+    except:
+        pass
+    
+    return False
 
 def run_measure_gen(measure_name):
     """ Legacy wrapper for default paths """
