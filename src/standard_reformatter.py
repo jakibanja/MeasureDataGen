@@ -5,6 +5,7 @@ This reformatter takes messy, unstructured test case files and converts them
 to the standard format defined in docs/STANDARD_TESTCASE_FORMAT.md
 """
 
+import os
 import pandas as pd
 import re
 from typing import Dict, List, Any, Optional
@@ -49,13 +50,16 @@ class StandardTestCaseReformatter:
         
         Args:
             input_path: Path to messy test case Excel file
-            output_path: Path for output file (default: input_path with _Standard suffix)
+            output_path: Path for output file (default: data/ folder with same filename)
         
         Returns:
             Path to standardized output file
         """
         if not output_path:
-            output_path = input_path.replace('.xlsx', '_Standard.xlsx')
+            # Extract just the filename from input path
+            filename = os.path.basename(input_path)
+            # Save to data/ folder with same filename
+            output_path = os.path.join('data', filename)
         
         print(f"\n📋 Reformatting test case: {input_path}")
         print(f"   Output: {output_path}")
