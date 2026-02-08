@@ -12,8 +12,8 @@ OUTPUT_FOLDER = 'output'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-# Default VSD Path
-DEFAULT_VSD = r"C:\Users\sushi\Downloads\RAG-Tutorials-main\data\HEDIS MY 2026 Volume 2 Value Set Directory_2025-08-01.xlsx"
+# VSD Configuration - Use environment variable
+DEFAULT_VSD = os.getenv('VSD_PATH', 'data/VSD_MY2026.xlsx')
 
 @app.route('/', methods=['GET', 'POST'])
 def index():

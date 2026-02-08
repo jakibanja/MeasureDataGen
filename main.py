@@ -139,7 +139,8 @@ def run_measure_gen(measure_name):
          if not os.path.exists(testcase_path):
              testcase_path = 'data/WCC_Test_Scenarios.xlsx'
              
-    vsd_path = r"C:\Users\sushi\Downloads\RAG-Tutorials-main\data\HEDIS MY 2026 Volume 2 Value Set Directory_2025-08-01.xlsx"
+    # Use VSD path from environment variable
+    vsd_path = os.getenv('VSD_PATH', 'data/VSD_MY2026.xlsx')
     
     return run_measure_gen_custom(measure_name, testcase_path, vsd_path)
 

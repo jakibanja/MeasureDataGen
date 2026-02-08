@@ -18,7 +18,10 @@ print(f"✓ Format detection: {time.time() - start:.2f}s (Standard: {is_standard
 
 # Test 3: VSD loading (cached)
 start = time.time()
-vsd_path = r"C:\Users\sushi\Downloads\RAG-Tutorials-main\data\HEDIS MY 2026 Volume 2 Value Set Directory_2025-08-01.xlsx"
+import os
+from dotenv import load_dotenv
+load_dotenv()
+vsd_path = os.getenv('VSD_PATH', 'data/VSD_MY2026.xlsx')
 result = run_measure_gen_custom(
     'PSA',
     'data/PSA_MY2026_TestCase.xlsx',
