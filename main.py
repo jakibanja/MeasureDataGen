@@ -377,12 +377,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     measures = [m.strip() for m in args.measures.split(',')]
-    vsd_path = args.vsd if args.vsd else os.getenv('VSD_PATH', 'data/VSD_MY2026.xlsx')
+    vsd_default = os.getenv('VSD_PATH', 'data/VSD_MY2026.xlsx')
+    vsd_path = args.vsd if args.vsd else vsd_default
     
     print(f"🚀 Starting HEDIS Mockup Generation for: {', '.join(measures)}")
+    print(f"📚 Using VSD: {vsd_path}")
+    
+    testcase_dir = os.getenv('TESTCASE_DIR', 'data')
     
     for measure in measures:
-        tc_path = args.testcase if args.testcase else f'data/{measure}_MY2026_TestCase.xlsx'
+        tc_default = os.path.join(testcase_dir, f'{measure}_MY2026_TestCase.xlsx')
+        tc_path = args.testcase if args.testcase else tc_default
         # Try STANDARD format if default missing
         if not os.path.exists(tc_path) and not args.testcase:
             standard_path = f'data/{measure}_STANDARD.xlsx'

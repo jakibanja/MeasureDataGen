@@ -51,7 +51,18 @@ python main.py PSA
 python main.py PSA,WCC,COL
 ```
 
-## 5. Key Features Overview
+## 5. Configuration via .env
+You can configure default paths in the `.env` file to avoid typing them every time:
+
+```properties
+# Path to your persistent VSD file
+VSD_PATH=C:/MyData/HEDIS_2026_VSD.xlsx
+
+# Directory containing your test cases
+TESTCASE_DIR=C:/MyData/TestCases/
+```
+
+## 6. Key Features Overview
 *   **Universal Format**: For new measures, use the `templates/Standard_TestCase_Template.xlsx`.
 *   **NCQA Parser**: Upload an official NCQA PDF in the UI to auto-generate measure configurations.
 *   **Smart Validator**: After generation, use the "Validate Results" button to verify compliance against test case expectations.
