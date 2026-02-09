@@ -41,7 +41,7 @@ class VSDManager:
         for target in target_sheets:
             for sheet in sheet_names:
                 if target.lower() in sheet.lower():
-                    print(f"Checking sheet: '{sheet}'...")
+                    # print(f"Checking sheet: '{sheet}'...")
                     found_df = self._scan_sheet_for_headers(sheet)
                     if found_df is not None:
                         print(f"✅ Discovered VSD in sheet: '{sheet}'")
@@ -54,6 +54,8 @@ class VSDManager:
             if found_df is not None:
                 print(f"✅ Structure matched in sheet: '{sheet}'")
                 return found_df
+        
+        raise ValueError(f"Could not locate a valid Value Set sheet in {self.vsd_path}. Checked sheets: {sheet_names}")
 
     def _scan_sheet_for_headers(self, sheet_name):
         """Scans the first 20 rows of a sheet to find the header row."""
