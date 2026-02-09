@@ -7,9 +7,11 @@ class VSDManager:
         self.measurement_year = measurement_year
         print(f"Loading VSD from {vsd_path}...")
         
-        # Use sheet index 3 for 'Value Set Directory'
-        self.df = pd.read_excel(vsd_path, sheet_name=3)
-        self.df['Value Set Name'] = self.df['Value Set Name'].str.strip()
+        # Try to smart-load the VSD
+        self.df = self._smart_load_vsd()
+        
+        # Normalize column names
+        self._normalize_columns()
         
         # Parse date columns if they exist
         self._parse_dates()
@@ -19,6 +21,77 @@ class VSDManager:
         # Filter for valid codes
         self.valid_codes_count = self._count_valid_codes()
         print(f"Valid codes for MY {measurement_year}: {self.valid_codes_count}")
+
+    def _smart_load_vsd(self):
+        """Attempts to find the correct sheet and columns."""
+        xl = pd.ExcelFile(self.vsd_path)
+        sheet_names = xl.sheet_names
+        
+        # 1. Try traditional integer index (Sheet 4 / Index 3)
+        if len(sheet_names) > 3:
+            try:
+                df = pd.read_excel(self.vsd_path, sheet_name=3)
+                if self._has_required_columns(df):
+                    return df
+            except:
+                pass
+
+        # 2. Try looking for sheet by name
+        target_sheets = ['Value Set Directory', 'Value Sets', 'Codes', 'Measures']
+        for target in target_sheets:
+            for sheet in sheet_names:
+                if target.lower() in sheet.lower():
+                    try:
+                        df = pd.read_excel(self.vsd_path, sheet_name=sheet)
+                        if self._has_required_columns(df):
+                            print(f"Discovered VSD in sheet: '{sheet}'")
+                            return df
+                    except:
+                        continue
+
+        # 3. Last scan: Check ALL sheets for a "Value Set Name" or similar column
+        print("Scanning all sheets for VSD structure...")
+        for sheet in sheet_names:
+            try:
+                df = pd.read_excel(self.vsd_path, sheet_name=sheet)
+                if self._has_required_columns(df):
+                    print(f"Structure matched in sheet: '{sheet}'")
+                    return df
+            except:
+                continue
+        
+        raise ValueError("Could not locate a valid Value Set directory sheet in the provided Excel file.")
+
+    def _has_required_columns(self, df):
+        """Check if dataframe has something looking like a value set name and code."""
+        cols = [c.lower() for c in df.columns]
+        has_name = any('value set' in c or 'valueset' in c for c in cols)
+        has_code = any('code' in c for c in cols)
+        return has_name and has_code
+
+    def _normalize_columns(self):
+        """Normalize key columns to standard names."""
+        col_map = {}
+        for col in self.df.columns:
+            l_col = col.lower().strip()
+            if 'value set name' in l_col:
+                col_map[col] = 'Value Set Name'
+            elif 'value set' in l_col and 'name' not in l_col: # e.g. "Value Set"
+                col_map[col] = 'Value Set Name'
+            elif l_col == 'code':
+                col_map[col] = 'Code'
+            elif 'effective' in l_col:
+                col_map[col] = 'Effective Date'
+            elif 'expiration' in l_col:
+                col_map[col] = 'Expiration Date'
+        
+        if col_map:
+            self.df.rename(columns=col_map, inplace=True)
+            
+        if 'Value Set Name' not in self.df.columns:
+            raise KeyError("Could not normalize column headers. Expected 'Value Set Name' or similar found: " + str(self.df.columns))
+            
+        self.df['Value Set Name'] = self.df['Value Set Name'].astype(str).str.strip()
     
     def _parse_dates(self):
         """Parse effective and expiration date columns."""
