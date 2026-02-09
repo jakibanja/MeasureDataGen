@@ -36,29 +36,49 @@ class VSDManager:
             except:
                 pass
 
-        # 2. Try looking for sheet by name
-        target_sheets = ['Value Set Directory', 'Value Sets', 'Codes', 'Measures']
+        # 2. Try looking for sheet by name (like 'Value Sets to Codes')
+        target_sheets = ['Value Set to Codes', 'Value Set Directory', 'Value Sets', 'Codes']
         for target in target_sheets:
             for sheet in sheet_names:
                 if target.lower() in sheet.lower():
-                    try:
-                        df = pd.read_excel(self.vsd_path, sheet_name=sheet)
-                        if self._has_required_columns(df):
-                            print(f"Discovered VSD in sheet: '{sheet}'")
-                            return df
-                    except:
-                        continue
+                    print(f"Checking sheet: '{sheet}'...")
+                    found_df = self._scan_sheet_for_headers(sheet)
+                    if found_df is not None:
+                        print(f"✅ Discovered VSD in sheet: '{sheet}'")
+                        return found_df
 
-        # 3. Last scan: Check ALL sheets for a "Value Set Name" or similar column
+        # 3. Last scan: Check ALL sheets
         print("Scanning all sheets for VSD structure...")
         for sheet in sheet_names:
-            try:
-                df = pd.read_excel(self.vsd_path, sheet_name=sheet)
-                if self._has_required_columns(df):
-                    print(f"Structure matched in sheet: '{sheet}'")
-                    return df
-            except:
-                continue
+            found_df = self._scan_sheet_for_headers(sheet)
+            if found_df is not None:
+                print(f"✅ Structure matched in sheet: '{sheet}'")
+                return found_df
+
+    def _scan_sheet_for_headers(self, sheet_name):
+        """Scans the first 20 rows of a sheet to find the header row."""
+        try:
+            # Read first 20 rows without header
+            preview = pd.read_excel(self.vsd_path, sheet_name=sheet_name, nrows=20, header=None)
+            
+            # Iterate through rows to find one with "Value Set Name" or similar
+            for idx, row in preview.iterrows():
+                row_str = row.astype(str).str.lower().tolist()
+                
+                # Check if this row looks like a header
+                has_name = any('value set name' in s or 'value set' in s for s in row_str)
+                has_code = any('code' in s for s in row_str)
+                
+                if has_name and has_code:
+                    # Found the header at row `idx`
+                    # Reload the sheet with this header row
+                    print(f"   Found headers at row {idx+1}")
+                    return pd.read_excel(self.vsd_path, sheet_name=sheet_name, header=idx)
+            
+            return None
+        except Exception as e:
+            # print(f"   Error scanning sheet {sheet_name}: {e}")
+            return None
         
         raise ValueError("Could not locate a valid Value Set directory sheet in the provided Excel file.")
 
