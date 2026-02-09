@@ -76,17 +76,17 @@ MeasMockD/
 4. Click "Generate Mockup"
 5. Download result
 
-### Command Line
+### Command Line (v2.0)
 
 ```bash
-# Generate PSA mockup
+# Generate PSA mockup (Default)
 python main.py
 
-# Add new measure
-python src/measure_automator.py IMA
+# Generate multiple measures with no-AI speed optimization
+python main.py PSA,WCC --no-ai --skip-quality-check
 
-# Reformat test case
-python src/reformatter.py data/TestCase.xlsx
+# Run with full NCQA Validation and specific model
+python main.py PSA --validate-ncqa --model llama3
 ```
 
 ## 🔧 Configuration
@@ -104,13 +104,26 @@ python src/measure_automator.py <MEASURE_NAME>
 # 4. Run generation
 ```
 
-## 📊 Performance
+## ✍️ Tester Syntax (Shorthand)
 
-- **Regex Mode:** ~0.05s per test case
-- **AI Fallback:** ~15s per test case
-- **500 Test Cases:** 30 seconds (all regex) to 2 hours (all AI)
+Testers can now use standardized shortcuts in the **Scenario Description** field to gain surgical control over data generation WITHOUT changing Excel columns.
 
-**Tip:** Use auto-reformat to clean data upfront for faster generation!
+| Shortcut | Description | Example |
+| :--- | :--- | :--- |
+| `PL: [Line]`| **Product Line** | `PL: Medicare` |
+| `AG: [Age]` | **Member Age** | `AG: 45` |
+| `ED: [Date]` | **Event Date** (Global) | `ED: 6/1/MY` |
+| `ED1: [Date]`| **Event Date** (Sequential) | `ED1: 1/1/MY` |
+| `CE: [Name]` | **Compliance Event** | `CE: PSA Test` |
+| `NE: [Name]` | **Numerator Exclusion**| `NE: Hospice` |
+
+**Full Guide:** See [docs/TESTER_SYNTAX.md](docs/TESTER_SYNTAX.md)
+
+## 📊 Performance & Optimization
+
+- **Regex Mode (`--no-ai`):** High speed (~0.05s / case). Best for well-structured data or using Tester Syntax.
+- **AI Mode:** Full reasoning for messy/paragraph scenarios. 
+- **Recommendation:** Use **Tester Syntax** + **Regex Mode** for the best balance of speed and control.
 
 ## 🚧 Roadmap
 
