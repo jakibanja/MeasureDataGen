@@ -76,7 +76,7 @@ tables:
       hospice_flag: "HOSPICE"
 
   # Pharmacy Claims
-  pharmacy:
+  rx:
     name: "{MEASURE}_RX_IN"
     fk: "MEM_NBR"
     fields:
@@ -84,6 +84,13 @@ tables:
       ndc: "RX_NDC"
       days_supply: "RX_DAYS_SUPP"
       quantity: "QTY_DISP"
+      claim_id: "RX_CLAIM_ID"
+      claim_den: "CLAIM_DEN"
+      claim_type: "CLAIM_TY"
+      prov_nbr: "PROV_NBR"
+      prov_npi: "PROV_NPI"
+      pharm_npi: "PHARM_NPI"
+      product_id: "PRODUCT_ID"
 
   # Laboratory Results
   lab:

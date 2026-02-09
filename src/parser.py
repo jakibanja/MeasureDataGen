@@ -210,19 +210,35 @@ class TestCaseParser:
             
             # PSA-specific patterns
             if 'psa' in kw and 'test' in kw:
-                # Look for CE=1, CE:1, CE 1, Clinical Event=1, etc.
                 if re.search(r'\bce\s*[:=]\s*1\b', blob_full):
                     found = True
-                # Look for "PSA", "Lab", "Screening", "Clinical Event"
                 if any(pattern in blob_full for pattern in ['psa', 'lab test', 'screening', 'clinical event']):
-                    # But exclude if it says "no psa", "not tested", "ce=0", "ce:0"
                     if not any(neg in blob_full for neg in ['no psa', 'not tested', 'ce=0', 'ce:0', 'ce =0', 'ce:  0']):
                         found = True
             
-            # Add other measure-specific patterns here as needed
-            
-            if found and comp['name'] not in parsed_sc["compliant"]:
-                parsed_sc["compliant"].append(comp['name'])
+            if found:
+                if comp['name'] not in parsed_sc["compliant"]:
+                    parsed_sc["compliant"].append(comp['name'])
+                
+                # ⚡ Extract Pharmacy-specific metadata (Days Supply, Quantity, NDC)
+                if comp.get('table') == 'rx' or "Medication" in comp['name'] or "Drug" in comp['name']:
+                    if 'events' not in parsed_sc["overrides"]: parsed_sc["overrides"]['events'] = {}
+                    if comp['name'] not in parsed_sc["overrides"]['events']:
+                        parsed_sc["overrides"]['events'][comp['name']] = {}
+                    
+                    meta = parsed_sc["overrides"]['events'][comp['name']]
+                    
+                    # Days Supply: DS: 30, Days: 90
+                    ds_match = re.search(r'(?:ds|days?|days?\s*supply)\s*[:=]\s*(\d+)', blob_full)
+                    if ds_match: meta['days_supply'] = int(ds_match.group(1))
+                    
+                    # Quantity: QTY: 30
+                    qty_match = re.search(r'(?:qty|quantity)\s*[:=]\s*(\d+)', blob_full)
+                    if qty_match: meta['quantity'] = int(qty_match.group(1))
+                    
+                    # NDC: NDC: 12345678901
+                    ndc_match = re.search(r'ndc\s*[:=]\s*([\d-]+)', blob_full)
+                    if ndc_match: meta['code'] = ndc_match.group(1).strip()
         
         for excl in exclusion_comps:
             kw_excl = excl['name'].lower()

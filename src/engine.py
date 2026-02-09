@@ -297,7 +297,7 @@ class MockupEngine:
         
         return target_table['name'], rows
 
-    def generate_clinical_event(self, mem_id, component_name, is_compliant=True, offset_days=0, overrides=None):
+    def generate_clinical_event(self, mem_id, component_name, is_compliant=True, offset_days=0, overrides=None, product_line='COMMERCIAL'):
         # Locate component in measure config
         component = next((c for c in self.measure['rules']['clinical_events']['numerator_components'] if c['name'] == component_name), None)
         
@@ -310,6 +310,8 @@ class MockupEngine:
                 table_key = 'emr'
             elif "PSA" in component_name or "Lab" in component_name:
                 table_key = 'lab'
+            elif "Medication" in component_name or "Drug" in component_name or "Rx" in component_name:
+                table_key = 'rx'
                 
             # Create a dummy component for logic below
             component = {
@@ -324,6 +326,7 @@ class MockupEngine:
             if 'VISIT' in table_raw.upper(): table_key = 'visit'
             elif 'EMR' in table_raw.upper(): table_key = 'emr'
             elif 'LAB' in table_raw.upper(): table_key = 'lab'
+            elif 'RX' in table_raw.upper() or 'PHARM' in table_raw.upper(): table_key = 'rx'
             else: table_key = 'visit'
 
         target_table = self.schema['tables'][table_key]
@@ -332,6 +335,8 @@ class MockupEngine:
         # ⚡ Apply Overrides from Scenario (Universal Format support)
         specific_code = None
         specific_value = None
+        specific_days = 30
+        specific_qty = 30
         if overrides and 'events' in overrides and component_name in overrides['events']:
             meta = overrides['events'][component_name]
             if 'date' in meta:
@@ -343,6 +348,10 @@ class MockupEngine:
                 specific_code = meta['code']
             if 'value' in meta:
                 specific_value = meta['value']
+            if 'days_supply' in meta:
+                specific_days = meta['days_supply']
+            if 'quantity' in meta:
+                specific_qty = meta['quantity']
 
         row = {
             target_table['fk'] if 'fk' in target_table else target_table['pk']: mem_id,
@@ -371,15 +380,24 @@ class MockupEngine:
                     row[target_table['fields']['cpt']] = final_code
                 elif table_key == 'visit':
                     row["CPT_1"] = final_code
+                elif table_key == 'rx':
+                    row[target_table['fields']['ndc']] = final_code
+                    row[target_table['fields']['days_supply']] = specific_days
+                    row[target_table['fields']['quantity']] = specific_qty
             else:
                 row['_CODE'] = 'MANUAL'
             
+            # ⚡ ALWAYS populate mandatory RX fields if targeting the RX table
+            if table_key == 'rx':
+                self._populate_rx_fields(row, target_table, mem_id, product_line=product_line)
+
             # Add a realistic diagnosis if it's a visit
             if table_key == 'visit' and self.vsd_manager:
                 diag = self.vsd_manager.get_random_code_from_pattern("Diagnosis")
                 if diag: row["DIAG_I_1"] = diag
                 row['_VALUE_SET_NAME'] = 'MANUAL'
 
+            # --- Measure-Specific Post-Processing ---
             if component_name == "BMI Percentile":
                 row[target_table['fields']['bmi_percentile']] = specific_value if specific_value is not None else 85
             elif "Counseling" in component_name:
@@ -395,11 +413,33 @@ class MockupEngine:
                 code_field = target_table['fields'].get('procedure_codes', [target_table['fields'].get('cpt', 'CPT_1')])[0]
                 row[code_field] = final_code
         
-        if overrides:
-            for f, v in overrides.items():
-                if f in row: row[f] = v
+            if overrides:
+                for f, v in overrides.items():
+                    if f in row: row[f] = v
 
         return target_table['name'], row
+
+    def _populate_rx_fields(self, row, target_table, mem_id, product_line='COMMERCIAL'):
+        """Populates rich metadata for pharmacy claims using schema mapping."""
+        fields = target_table.get('fields', {})
+        import time
+        
+        # Claim Identity
+        if 'claim_id' in fields:
+            row[fields['claim_id']] = f"RX_{mem_id}_{int(time.time())}"
+        
+        # Claim Indicators
+        if 'claim_den' in fields: row[fields['claim_den']] = 'N'
+        if 'claim_type' in fields: row[fields['claim_type']] = 'P' # P = Pharmacy
+        
+        # Provider Context
+        if 'prov_nbr' in fields: row[fields['prov_nbr']] = 'PROV123'
+        if 'prov_npi' in fields: row[fields['prov_npi']] = '1234567890'
+        if 'pharm_npi' in fields: row[fields['pharm_npi']] = '0987654321'
+        
+        # Product Context
+        if 'product_id' in fields: 
+            row[fields['product_id']] = product_line.upper()
 
     def generate_exclusion(self, mem_id, exclusion_name, overrides=None):
         # Find exclusion in config
@@ -450,3 +490,31 @@ class MockupEngine:
             target_table['fields']['diagnosis_codes'][0]: code
         }
         return target_table['name'], row
+
+    def generate_monthly_membership(self, mem_id, monthly_overrides):
+        """
+        Generates records for the monthly membership table (HOSPICE, LIS, etc.)
+        based on structured overrides with run dates.
+        """
+        if not monthly_overrides:
+            return None, []
+            
+        target_table = self.schema['tables']['monthly_membership']
+        rows = []
+        
+        # Group by run_date to create one record per month if needed
+        by_date = {}
+        for entry in monthly_overrides:
+            rd = self.parse_date_str(entry['run_date'])
+            if rd not in by_date:
+                by_date[rd] = {
+                    target_table['fk']: mem_id,
+                    target_table['fields']['run_date']: rd
+                }
+            
+            # Map logical field to physical column if possible
+            field = entry['field']
+            mapped_col = target_table['fields'].get(field.lower(), field)
+            by_date[rd][mapped_col] = entry['value']
+            
+        return target_table['name'], list(by_date.values())

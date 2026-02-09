@@ -20,4 +20,13 @@ rules:
       value_set_names: ["Hospice Encounter", "Hospice Intervention"]
 
   clinical_events:
-    numerator_components: [] # Will be populated dynamically from Excel
+    numerator_components:
+      - name: "Universal Lab Test"
+        value_set_names: ["PSA Lab Test"]
+        table: "lab"
+      - name: "Universal Pharmacy Record"
+        value_set_names: ["Pharmacy"]
+        table: "rx"
+      - name: "Universal Clinical Procedure"
+        value_set_names: ["Outpatient"]
+        table: "emr"

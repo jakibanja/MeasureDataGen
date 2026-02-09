@@ -31,13 +31,14 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
     """
     start_time = time.time()
     measure_name = measure_name.upper()
-    config_path = f'config/{measure_name}.yaml'
-    schema_path = 'config/schema_map.yaml'
+    config_dir = os.getenv('CONFIG_DIR', 'config')
+    schema_path = os.getenv('SCHEMA_MAP_PATH', 'config/schema_map.yaml')
+    config_path = os.path.join(config_dir, f'{measure_name}.yaml')
     
     # ⚡ Universal Fallback: If no specific config exists, use the Universal template
     if not os.path.exists(config_path):
         print(f"⚠️  No config found for {measure_name}, using Universal template...")
-        config_path = 'config/Universal.yaml'
+        config_path = os.path.join(config_dir, 'Universal.yaml')
     
     if not os.path.exists(testcase_path):
         print(f"Skipping {measure_name}: Test case file not found at {testcase_path}")
@@ -237,7 +238,7 @@ def _process_measure(measure_config, measure_name, parser, engine, output_path=N
         from src.quality_checker import DataQualityChecker
         quality_checker = DataQualityChecker(data_store, full_schema)
         quality_report = quality_checker.check_all()
-        quality_report_path = f'output/{measure_name}_Quality_Report.xlsx'
+        quality_report_path = os.path.join(os.getenv('OUTPUT_DIR', 'output'), f'{measure_name}_Quality_Report.xlsx')
         quality_checker.export_report(quality_report_path)
         if not quality_report['passed']:
             print(f"⚠️  Quality check failed! See report: {quality_report_path}")
@@ -255,25 +256,46 @@ def _process_measure(measure_config, measure_name, parser, engine, output_path=N
         except:
             pass
 
-    # 6. Write to Output
+    output_dir = os.getenv('OUTPUT_DIR', 'output')
     print("\n📝 Writing output file...")
     if not output_path:
-        output_path = f'output/{measure_name}_MY2026_Mockup_v20.xlsx'
+        output_path = os.path.join(output_dir, f'{measure_name}_MY2026_Mockup_v20.xlsx')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-        measure_tables = [table['name'] for table in engine.schema['tables'].values()]
+        # Use a set to track all tables that have data
+        all_target_tables = set(engine.schema['tables'][t]['name'] for t in engine.schema['tables'])
+        all_target_tables.update(data_store.keys())
+        
         has_written = False
-        for sheet_name in measure_tables:
+        # Sort to keep stable order (Member, Enrollment first usually)
+        for sheet_name in sorted(list(all_target_tables)):
             rows = data_store.get(sheet_name, [])
             if not rows: continue
+            
             df = pd.DataFrame(rows)
-            logical_key = next((k for k, v in engine.schema['tables'].items() if v['name'] == sheet_name), None)
-            psa_sheet = f"PSA_{logical_key.upper()}_IN" if logical_key else None
+            
+            # ⚡ ROBUSTNESS: Dynamic Column Selection (Prefix-Independent)
             cols = full_schema.get(sheet_name)
-            if not cols and psa_sheet: cols = full_schema.get(psa_sheet)
+            if not cols:
+                # Extract the logical part of the table name (e.g. SMD_VISIT_IN -> VISIT)
+                parts = sheet_name.split('_')
+                logical_type = parts[1] if len(parts) > 1 else 'VISIT'
+                
+                # Try to find ANY matching table type in the master schema
+                # e.g. If looking for SMD_VISIT_IN, use the columns from PSA_VISIT_IN
+                for existing_sheet in full_schema.keys():
+                    if f'_{logical_type}_' in existing_sheet:
+                        cols = full_schema[existing_sheet]
+                        print(f"    ✨ Auto-mapped {sheet_name} to {existing_sheet} column structure")
+                        break
+            
             if cols:
-                df = df.reindex(columns=[c for c in cols if c in df.columns or True])
+                # Reindex to match requested schema columns
+                # We use union of existing and requested to avoid losing data
+                df = df.reindex(columns=cols)
+            
+            # Excel sheet names max 31 chars
             df.to_excel(writer, sheet_name=sheet_name[:31], index=False)
             print(f"  Written {len(df)} rows to {sheet_name}")
             has_written = True
@@ -298,9 +320,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     measures = [m.strip() for m in args.measures.split(',')]
     vsd_path = args.vsd if args.vsd else os.getenv('VSD_PATH', 'data/VSD_MY2026.xlsx')
+    data_dir = os.getenv('DATA_DIR', 'data')
     
     print(f"🚀 Starting HEDIS Mockup Generation for: {', '.join(measures)}")
-    testcase_dir = os.getenv('TESTCASE_DIR', 'data')
+    testcase_dir = os.getenv('TESTCASE_DIR', data_dir)
     
     for measure in measures:
         tc_default = os.path.join(testcase_dir, f'{measure}_MY2026_TestCase.xlsx')
@@ -320,7 +343,7 @@ if __name__ == "__main__":
                     pass
 
         if not os.path.exists(tc_path) and not args.testcase:
-            standard_path = f'data/{measure}_STANDARD.xlsx'
+            standard_path = os.path.join(data_dir, f'{measure}_STANDARD.xlsx')
             if os.path.exists(standard_path): tc_path = standard_path
 
         run_measure_gen_custom(
