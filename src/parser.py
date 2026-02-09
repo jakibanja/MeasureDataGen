@@ -96,7 +96,8 @@ class TestCaseParser:
                             "product_line": "Medicare",
                             "enrollment_spans": [],
                             "visit_spans": [],
-                            "overrides": {}
+                            "overrides": {},
+                            "monthly_overrides": []
                         }
                         all_scenarios.append(current_sc)
     
@@ -113,11 +114,22 @@ class TestCaseParser:
         numerator_comps = measure_config['rules']['clinical_events']['numerator_components']
         exclusion_comps = measure_config['rules'].get('exclusions', [])
         
+        # ⚡ Shared Regex Definitions for Dates & Ranges
+        date_part = r'\d{1,4}[-/.\s]\d{1,2}[-/.\s](?:MY(?:[\-\+]\d+)?|\d{2,4})'
+        date_part_full = rf'(?:{date_part}|MY(?:[\-\+]\d+)?)'
+        range_regex = rf'({date_part_full})\s*(?:-|to|until|—)\s*({date_part_full})'
+
         # Combine all columns into lines to scan for data
         row_values = [str(val) for val in row.values if pd.notna(val)]
         blob_full = " ".join(row_values).lower()
 
-        # 1. Product Line
+        # 1. Product Line (PL:)
+        pl_match = re.search(r'pl\s*:\s*(\w+)', blob_full)
+        if pl_match:
+            pl_query = pl_match.group(1).lower()
+        else:
+            pl_query = blob_full
+
         pl_aliases = {
             "Commercial": ["commercial", "comm"],
             "Medicaid": ["medicaid", "medi-cal", "mcd"],
@@ -125,12 +137,25 @@ class TestCaseParser:
             "Exchange": ["exchange", "marketplace", "qhp", "hix"]
         }
         for pl_name, aliases in pl_aliases.items():
-            if any(alias in blob_full for alias in aliases):
+            if any(alias in pl_query for alias in aliases):
                 parsed_sc["product_line"] = pl_name
                 break
 
-        # 2. Age Detection
-        if parsed_sc.get("age") == 70:
+        # 1.5 ⚡ BE: Benefit Profile Shortcut (e.g., BE: Medical)
+        be_match = re.search(r'be\s*:\s*(\w+)', blob_full)
+        if be_match:
+            profile_name = be_match.group(1).upper()
+            if profile_name in self.benefit_profiles:
+                for mapped_col in self.benefit_profiles[profile_name]:
+                    parsed_sc["overrides"][mapped_col] = 1
+            else:
+                parsed_sc["overrides"][f"BEN_{profile_name}"] = 1
+
+        # 2. Age Detection (AG:)
+        ag_match = re.search(r'ag\s*:\s*(\d+)', blob_full)
+        if ag_match:
+            parsed_sc["age"] = int(ag_match.group(1))
+        elif parsed_sc.get("age") == 70:
             age_match = re.search(r'(\d+)\s*(?:-|to)\s*(\d+)', blob_full)
             if age_match:
                 low, high = map(int, age_match.groups())
@@ -144,10 +169,40 @@ class TestCaseParser:
                         parsed_sc["age"] = val
                         break
         
-        # 3. Compliance & Exclusions
+        # 2.5 Anchor Date Detection (AD:)
+        ad_match = re.search(r'ad\s*:\s*(' + date_part_full + r'|[\w\s]+?measurement year)', blob_full, re.IGNORECASE)
+        if ad_match:
+            parsed_sc["anchor_date"] = ad_match.group(1).strip()
+
+        # 2.6 Event Date Override (ED:) - Support multiple formats
+        # a) Global: ED: 1/1/MY
+        ed_match = re.search(r'\bed\s*:\s*(' + date_part_full + r')(?!\s*=)', blob_full, re.IGNORECASE)
+        if ed_match:
+            parsed_sc["event_date_override"] = ed_match.group(1).strip()
+            
+        # b) Numbered: ED1: 1/1/MY, ED2: 2/1/MY
+        ed_numbers = re.findall(r'\bed(\d+)\s*:\s*(' + date_part_full + r')', blob_full, re.IGNORECASE)
+        for num, dt in ed_numbers:
+            parsed_sc["overrides"].setdefault("events_by_index", {})[int(num)] = dt.strip()
+
+        # c) Named: ED: PSA Test=6/1/MY
+        ed_named = re.findall(r'\bed\s*:\s*([^=\n]+?)\s*[:=]\s*(' + date_part_full + r')', blob_full, re.IGNORECASE)
+        for name, dt in ed_named:
+            clean_name = name.strip().lower()
+            if clean_name not in ['ad', 'ce', 'ne', 'ag', 'pl']: # Skip other prefixes
+                if 'events' not in parsed_sc["overrides"]: parsed_sc["overrides"]['events'] = {}
+                # Match to numerator or exclusion
+                matched_name = next((c['name'] for c in numerator_comps if clean_name in c['name'].lower()), name.strip())
+                parsed_sc["overrides"]['events'][matched_name] = {'date': dt.strip()}
+        
+        # 3. Compliance & Exclusions (CE: and NE:)
         for comp in numerator_comps:
             kw = comp['name'].lower()
             found = False
+            
+            # ⚡ Explicit CE: prefix
+            if re.search(rf'\bce\s*[:=]\s*{kw}', blob_full):
+                found = True
             
             # Direct keyword match
             if kw in blob_full:
@@ -165,14 +220,22 @@ class TestCaseParser:
                         found = True
             
             # Add other measure-specific patterns here as needed
-            # WCC: BMI, Nutrition, Physical Activity
-            # IMA: Immunization, Vaccine, etc.
             
             if found and comp['name'] not in parsed_sc["compliant"]:
                 parsed_sc["compliant"].append(comp['name'])
         
         for excl in exclusion_comps:
-            if excl['name'].lower() in blob_full:
+            kw_excl = excl['name'].lower()
+            found_excl = False
+            
+            # ⚡ Explicit NE: prefix
+            if re.search(rf'\bne\s*[:=]\s*{kw_excl}', blob_full):
+                found_excl = True
+                
+            if kw_excl in blob_full:
+                found_excl = True
+                
+            if found_excl:
                 if excl['name'] not in parsed_sc["excluded"]:
                     parsed_sc["excluded"].append(excl['name'])
         
@@ -220,10 +283,6 @@ class TestCaseParser:
                     parsed_sc["overrides"][match.group(1).upper()] = val
 
         # 4. Dates & Ranges
-        date_part = r'\d{1,4}[-/.\s]\d{1,2}[-/.\s](?:MY(?:[\-\+]\d+)?|\d{2,4})'
-        date_part_full = rf'(?:{date_part}|MY(?:[\-\+]\d+)?)'
-        range_regex = rf'({date_part_full})\s*(?:-|to|until|—)\s*({date_part_full})'
-        
         in_enr_section = False
         for cell_val in row_values:
             cell_str = str(cell_val).strip()
@@ -234,37 +293,33 @@ class TestCaseParser:
                 in_enr_section = True
             
             # Find Ranges (Enrollment)
+            # ⚡ Enhanced for Tester Syntax (1st Enrollment, --prod id, etc.)
             for match in re.finditer(range_regex, cell_str, re.IGNORECASE):
                 start_str, end_str = match.groups()
-                start_pos = match.end()
+                start_pos = match.start()
                 
-                # Search for attributes AFTER this date range but BEFORE the next one
-                # We'll peek ahead to see where the next range starts
-                next_match = re.search(range_regex, cell_str[start_pos:], re.IGNORECASE)
-                end_pos = start_pos + next_match.start() if next_match else len(cell_str)
-                context_str = cell_str[match.start():end_pos]
+                # Look backwards for "1st Enrollment", "2nd Enrollment", "Plan 1"
+                prefix_context = cell_str[max(0, start_pos-40):start_pos].lower()
+                
+                # Look forwards for attributes
+                search_end = cell_str.find("\n", match.end())
+                if search_end == -1: search_end = len(cell_str)
+                context_str = cell_str[start_pos:search_end]
                 
                 prod_regex = r'(?:product_?id|rollup_?id|prod_?id|pl_?id|product|rollup|prod|pl)\s*[:=]?\s*(\w+)'
                 prod_match = re.search(prod_regex, context_str, re.IGNORECASE)
                 
-                # Fallback to whole cell, then whole row
-                if not prod_match: prod_match = re.search(prod_regex, cell_str, re.IGNORECASE)
                 if not prod_match:
-                    for other_val in row_values:
-                        pm = re.search(prod_regex, str(other_val), re.IGNORECASE)
-                        if pm: 
-                            prod_match = pm
-                            break
-                
+                    # Try looking for --prod id 11
+                    prod_match = re.search(r'--prod\s*id\s*(\d+)', context_str, re.IGNORECASE)
+
                 prod_val = prod_match.group(1) if prod_match else None
                 
                 cov_regex = r'(?:coverage_indicator|coverage_ind|coverage|cover|cov)\s*[:=]\s*(\w+)'
                 cov_match = re.search(cov_regex, context_str, re.IGNORECASE)
-                if not cov_match: cov_match = re.search(cov_regex, cell_str, re.IGNORECASE)
                 cov_val = cov_match.group(1) if cov_match else None
                 
                 ben_hospice_match = re.search(r'ben[-_]hospice\s*[:=]\s*(\w+)', context_str, re.IGNORECASE)
-                if not ben_hospice_match: ben_hospice_match = re.search(r'ben[-_]hospice\s*[:=]\s*(\w+)', cell_str, re.IGNORECASE)
                 ben_hospice_val = ben_hospice_match.group(1) if ben_hospice_match else None
 
                 span_data = {
@@ -278,6 +333,17 @@ class TestCaseParser:
                     span_data['BEN_HOSPICE'] = val
 
                 parsed_sc["enrollment_spans"].append(span_data)
+
+            # ⚡ 4.5 Flags with Run Dates (Hospice=Y in ... with Rundate=...)
+            flag_date_matches = re.findall(r'(\b\w+\b)\s*([:=])\s*([yn01])\b.*?rundate\s*[:=]\s*(' + date_part_full + r')', cell_str, re.IGNORECASE)
+            for flag, _, val, run_dt in flag_date_matches:
+                col = flag.upper()
+                v = 1 if val.upper() in ['Y', '1'] else 0
+                parsed_sc["monthly_overrides"].append({
+                    'field': col,
+                    'value': v,
+                    'run_date': run_dt.upper()
+                })
 
             # Find Single Dates (Visits)
             if any(kw in l_norm for kw in ["visit", "encounter", "checkup"]):

@@ -10,6 +10,7 @@ regex patterns or AI fallback.
 
 import pandas as pd
 import yaml
+import re
 from typing import Dict, List, Any, Optional
 
 
@@ -87,19 +88,55 @@ class StandardFormatParser:
             'scenario': row.get('SCENARIO_DESCRIPTION', ''),
             'expected': row.get('EXPECTED_RESULT', ''),
         }
+
+        # ⚡ Apply Tester Syntax to SCENARIO_DESCRIPTION for flexibility
+        desc = str(scenario['scenario']).lower()
         
+        # PL: (Product Line)
+        pl_match = re.search(r'pl\s*:\s*(\w+)', desc)
+        if pl_match:
+            pl_query = pl_match.group(1).lower()
+            if 'comm' in pl_query: scenario['product_line'] = 'Commercial'
+            elif 'medi-cal' in pl_query or 'mcd' in pl_query or 'medicaid' in pl_query: scenario['product_line'] = 'Medicaid'
+            elif 'mcr' in pl_query or 'medicare' in pl_query: scenario['product_line'] = 'Medicare'
+            elif 'exch' in pl_query or 'market' in pl_query: scenario['product_line'] = 'Exchange'
+
+        # AG: (Age)
+        ag_match = re.search(r'ag\s*:\s*(\d+)', desc)
+        if ag_match: scenario['age'] = int(ag_match.group(1))
+
+        # AD: (Anchor Date)
+        ad_match = re.search(r'ad\s*:\s*([\d/MY\-\+]+)', desc, re.IGNORECASE)
+        if ad_match: scenario['anchor_date'] = ad_match.group(1).strip()
+
+        # ED: (Event Date)
+        ed_match = re.search(r'ed\s*:\s*([\d/MY\-\+]+)', desc, re.IGNORECASE)
+        if ed_match: scenario['event_date_override'] = ed_match.group(1).strip()
+
         # Parse enrollment periods
         scenario['enrollment_spans'] = self._parse_enrollments(row)
         
         # Parse visits
         scenario['visit_spans'] = self._parse_visits(row)
         
-        # Parse clinical events (compliant components)
+        # Parse clinical events
         scenario['compliant'] = self._parse_events(row, measure_config, scenario['overrides'])
         
+        # CE: (Compliance Event Shorthand)
+        for comp in measure_config.get('rules', {}).get('clinical_events', {}).get('numerator_components', []):
+            kw = comp['name']
+            if re.search(rf'\bce\s*[:=]\s*{kw.lower()}', desc) and kw not in scenario['compliant']:
+                scenario['compliant'].append(kw)
+
         # Parse exclusions
         scenario['excluded'] = self._parse_exclusions(row, measure_config, scenario['overrides'])
         
+        # NE: (Numerator Exclusion Shorthand)
+        for excl in measure_config.get('rules', {}).get('exclusions', []):
+            kw = excl['name']
+            if re.search(rf'\bne\s*[:=]\s*{kw.lower()}', desc) and kw not in scenario['excluded']:
+                scenario['excluded'].append(kw)
+
         return scenario
     
     def _parse_enrollments(self, row: pd.Series) -> List[Dict[str, Any]]:

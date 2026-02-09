@@ -2,6 +2,7 @@ import pandas as pd
 import json
 import os
 import time
+import yaml
 from dotenv import load_dotenv
 from src.engine import MockupEngine
 from src.parser import TestCaseParser
@@ -53,7 +54,6 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
     vsd_manager = _vsd_cache[vsd_path]
     
     # ⚡ Use cached AI Extractor (saves 5-15 seconds on subsequent runs)
-    # Can be disabled via parameter or environment variable
     if disable_ai is None:
         disable_ai = os.getenv('DISABLE_AI_EXTRACTOR', 'false').lower() == 'true'
     
@@ -65,7 +65,6 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
     else:
         try:
             from src.ai_extractor import AIScenarioExtractor
-            # If cache exists but is a different model, we must re-initialize
             needs_init = _ai_extractor_cache is None or _ai_extractor_cache == "FAILED"
             if not needs_init and hasattr(_ai_extractor_cache, 'model_name') and _ai_extractor_cache.model_name != model_name:
                 print(f"🔄 Switching AI model from {_ai_extractor_cache.model_name} to {model_name}...")
@@ -74,21 +73,19 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
             if needs_init:
                 print(f"🤖 Initializing AI Extractor with model '{model_name}' (this may take 5-15 seconds)...")
                 ai_load_start = time.time()
-                
                 try:
                     _ai_extractor_cache = AIScenarioExtractor(model_name=model_name)
                     print(f"   ✓ AI Extractor loaded in {time.time() - ai_load_start:.2f}s")
                 except Exception as init_error:
                     print(f"   ❌ AI Extractor failed to initialize: {init_error}")
-                    print(f"   ⚡ Continuing in regex-only mode (faster anyway!)")
-                    _ai_extractor_cache = "FAILED"  # Mark as failed to avoid retrying
+                    _ai_extractor_cache = "FAILED"
             elif _ai_extractor_cache == "FAILED":
                 print("⚡ AI Extractor previously failed, using regex-only mode")
             else:
                 print(f"⚡ Using cached AI Extractor with model '{model_name}'")
                 extractor = _ai_extractor_cache
         except Exception as e:
-            print(f"⚠️  AI Extractor initialization failed (running in regex-only mode): {e}")
+            print(f"⚠️  AI Extractor initialization failed: {e}")
             _ai_extractor_cache = "FAILED"
 
     # ⚡ Auto-detect format and use appropriate parser
@@ -103,7 +100,11 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
     
     engine = MockupEngine(config_path, schema_path, vsd_manager=vsd_manager, measure_name_override=measure_name)
     
-    result = _process_measure(measure_name, parser, engine, skip_quality_check=skip_quality_check, validate_ncqa=validate_ncqa)
+    # Load config for parser
+    with open(config_path) as f:
+        measure_config = yaml.safe_load(f)
+
+    result = _process_measure(measure_config, measure_name, parser, engine, skip_quality_check=skip_quality_check, validate_ncqa=validate_ncqa)
     
     total_time = time.time() - start_time
     print(f"\n⏱️  Total generation time: {total_time:.2f} seconds")
@@ -111,31 +112,17 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
     return result
 
 def _is_standard_format(file_path):
-    """
-    Detect if test case file is in standard format.
-    
-    Returns True if:
-    - Filename contains '_STANDARD'
-    - File has single sheet with standard columns (MEMBER_ID, ENROLLMENT_1_START, etc.)
-    """
-    # Check filename
     if '_STANDARD' in file_path.upper():
         return True
-    
-    # Check file structure
     try:
         xl = pd.ExcelFile(file_path)
-        # Standard format has single sheet
         if len(xl.sheet_names) == 1:
-            df = pd.read_excel(file_path, nrows=0)  # Just read headers
-            columns = set(df.columns)
-            # Check for standard format columns
+            df = pd.read_excel(file_path, nrows=0)
             standard_indicators = {'MEMBER_ID', 'ENROLLMENT_1_START', 'VISIT_1_DATE', 'EVENT_1_NAME'}
-            if standard_indicators.issubset(columns):
+            if standard_indicators.issubset(set(df.columns)):
                 return True
     except:
         pass
-    
     return False
 
 def run_measure_gen(measure_name):
@@ -144,66 +131,30 @@ def run_measure_gen(measure_name):
     if measure_name == 'WCC':
          if not os.path.exists(testcase_path):
              testcase_path = 'data/WCC_Test_Scenarios.xlsx'
-             
-    # Use VSD path from environment variable
     vsd_path = os.getenv('VSD_PATH', 'data/VSD_MY2026.xlsx')
-    
     return run_measure_gen_custom(measure_name, testcase_path, vsd_path)
 
-def _process_measure(measure_name, parser, engine, output_path=None, audit_logger=None, skip_quality_check=False, validate_ncqa=False):
-    """
-    Core processing logic: parse scenarios, generate data, write output.
-    
-    Args:
-        measure_name: Name of the measure (e.g., 'PSA')
-        parser: TestCaseParser instance
-        engine: MockupEngine instance
-        output_path: Optional custom output path
-        audit_logger: Optional AuditLogger instance for tracking
-        skip_quality_check: If True, skips quality checks for faster generation
-    
-    Returns:
-        Path to generated output file
-    """
+def _process_measure(measure_config, measure_name, parser, engine, output_path=None, audit_logger=None, skip_quality_check=False, validate_ncqa=False):
     print(f"\n--- Processing {measure_name} ---")
-    
-    # Load measure config
-    import yaml
-    config_path = f'config/{measure_name}.yaml'
-    with open(config_path) as f:
-        measure_config = yaml.safe_load(f)
     
     # 1. Parse Scenarios
     print("Reading scenarios from {}...".format(parser.file_path))
     scenarios = parser.parse_scenarios(measure_config)
     print(f"Found {len(scenarios)} scenarios.")
     
-    # Log parsing
-    if audit_logger:
-        ai_fallback_count = sum(1 for sc in scenarios if sc.get('_ai_extracted', False))
-        audit_logger.log_parsing(len(scenarios), ai_fallback_count)
-
-    # 2. Containers for data (dynamically build based on measure)
+    # 2. Containers for data
     data_store = {}
-    # Get all table names from schema
     for table_key, table_info in engine.schema['tables'].items():
         table_name = table_info['name']
         data_store[table_name] = []
 
-    # 3. Process each scenario with progress indicators
+    # 3. Process each scenario
     from src.progress import progress_tracker
     progress_tracker.update(f"🔄 Processing {len(scenarios)} scenarios for {measure_name}...", member_count=0)
     
     print(f"📊 Processing {len(scenarios)} scenarios...")
     for idx, sc in enumerate(scenarios, 1):
         mem_id = sc['id']
-        progress_tracker.update(
-            f"🔄 Generating records: {mem_id}", 
-            member_count=idx,
-            details=f"Processing member {idx} of {len(scenarios)}"
-        )
-        
-        # Progress indicator every 10 scenarios
         if idx % 10 == 0 or idx == len(scenarios):
             print(f"  Progress: {idx}/{len(scenarios)} scenarios processed ({idx*100//len(scenarios)}%)")
         
@@ -230,12 +181,25 @@ def _process_measure(measure_name, parser, engine, output_path=None, audit_logge
         data_store[v_table].extend(v_rows)
 
         # 4. Compliance Events
-        # Track which components we've processed to avoid duplicates
         processed_components = set()
         
-        # First, process components defined in the measure config
+        # ⚡ Shared Event Date Logic (Respect ED: override)
+        ed_override = sc.get('event_date_override')
+        ed_by_index = overrides.get('events_by_index', {})
+        
         for i, comp in enumerate(engine.measure['rules']['clinical_events']['numerator_components']):
             if comp['name'] in sc['compliant']:
+                # ⚡ Precedence: 1. Named Override 2. Index Override (ED1, ED2) 3. Global ED: 4. Generated
+                comp_override = overrides.get('events', {}).get(comp['name'], {})
+                
+                target_dt = comp_override.get('date')
+                if not target_dt: target_dt = ed_by_index.get(i+1)
+                if not target_dt: target_dt = ed_override
+                
+                if target_dt:
+                    if 'events' not in overrides: overrides['events'] = {}
+                    overrides['events'][comp['name']] = {'date': target_dt}
+
                 table_name, row = engine.generate_clinical_event(
                     mem_id, comp['name'], is_compliant=True, offset_days=i*30, 
                     overrides=overrides
@@ -244,10 +208,8 @@ def _process_measure(measure_name, parser, engine, output_path=None, audit_logge
                     data_store[table_name].append(row)
                 processed_components.add(comp['name'])
         
-        # Then, process any extra events in sc['compliant'] not in config (Universal support)
         for i, event_name in enumerate(sc['compliant']):
             if event_name not in processed_components:
-                # Default to 'visit' table for unknown events
                 table_name, row = engine.generate_clinical_event(
                     mem_id, event_name, is_compliant=True, offset_days=(len(processed_components)+i)*30, 
                     overrides=overrides
@@ -260,108 +222,65 @@ def _process_measure(measure_name, parser, engine, output_path=None, audit_logge
             table_name, row = engine.generate_exclusion(mem_id, excl_name, overrides=overrides)
             if table_name and table_name in data_store:
                 data_store[table_name].append(row)
+        
+        # 6. Monthly Flags (Structured Overrides)
+        m_table, m_rows = engine.generate_monthly_membership(mem_id, sc.get('monthly_overrides', []))
+        if m_table and m_rows:
+            data_store[m_table].extend(m_rows)
 
-    # Load full schema for both quality checks and writing
+    # 4. Quality Checks
     with open('data_columns_info.json', 'r') as f:
         full_schema = json.load(f)
 
-    # 4. Run Data Quality Checks (optional for faster generation)
     if not skip_quality_check:
-        progress_tracker.update("🔍 Running data quality checks...", details="Verifying data integrity and schema compliance")
         print("\n🔍 Running data quality checks...")
         from src.quality_checker import DataQualityChecker
-        
         quality_checker = DataQualityChecker(data_store, full_schema)
         quality_report = quality_checker.check_all()
-        
-        # Export quality report
         quality_report_path = f'output/{measure_name}_Quality_Report.xlsx'
         quality_checker.export_report(quality_report_path)
-        
-        # Warn if critical issues found
         if not quality_report['passed']:
             print(f"⚠️  Quality check failed! See report: {quality_report_path}")
-    else:
-        print("\n⚡ Skipping quality checks for faster generation")
 
-    # 5. Run NCQA Compliance Checks (if enabled)
+    # 5. NCQA Compliance
     if validate_ncqa and not skip_quality_check:
-        progress_tracker.update("🔍 Checking NCQA compliance...", details="Validating against official NCQA rules")
         print("\n🔍 Checking NCQA compliance...")
         try:
             from src.ncqa_compliance import NCQAComplianceChecker
-            
-            # Look for NCQA spec
             ncqa_spec_path = f'config/ncqa/{measure_name}_NCQA.yaml'
-            
-            # Use VSD manager from engine if available
             vsd_manager = engine.vsd_manager if hasattr(engine, 'vsd_manager') else None
-            
             checker = NCQAComplianceChecker(measure_config, ncqa_spec_path, vsd_manager)
             compliance = checker.check_compliance(data_store, scenarios)
-            
             print(f"   Compliance Score: {compliance['score']}/100")
-            
-            if compliance['issues']:
-                print("   ⚠️ Compliance Issues:")
-                for issue in compliance['issues']:
-                    print(f"   - {issue}")
-            else:
-                print("   ✅ Data appears compliant with available rules.")
-            
-            # Save simple report
-            report_path = f'output/{measure_name}_Compliance_Report.txt'
-            with open(report_path, 'w') as f:
-                f.write(f"NCQA Compliance Report for {measure_name}\n")
-                f.write(f"Score: {compliance['score']}/100\n")
-                f.write(f"Status: {'PASSED' if compliance['passed'] else 'FAILED'}\n\n")
-                f.write("Issues found:\n" if compliance['issues'] else "No issues found.\n")
-                for issue in compliance['issues']:
-                    f.write(f"- {issue}\n")
-                    
-        except ImportError:
-            print("⚠️ NCQAComplianceChecker not found. Skipping.")
-        except Exception as e:
-            print(f"⚠️ Compliance check error: {e}")
+        except:
+            pass
 
     # 6. Write to Output
     print("\n📝 Writing output file...")
     if not output_path:
-        output_path = f'output/{measure_name}_MY2026_Mockup_v17.xlsx'
+        output_path = f'output/{measure_name}_MY2026_Mockup_v20.xlsx'
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-        # Get all mapped table names for this measure from engine
         measure_tables = [table['name'] for table in engine.schema['tables'].values()]
-        
         has_written = False
         for sheet_name in measure_tables:
             rows = data_store.get(sheet_name, [])
-            if not rows:
-                continue
-                
+            if not rows: continue
             df = pd.DataFrame(rows)
-            # Use full_schema for column ordering if available, else use df columns
-            # Map sheet_name back to logical name or PSA counterpart to get columns
             logical_key = next((k for k, v in engine.schema['tables'].items() if v['name'] == sheet_name), None)
             psa_sheet = f"PSA_{logical_key.upper()}_IN" if logical_key else None
-            
             cols = full_schema.get(sheet_name)
-            if not cols and psa_sheet:
-                cols = full_schema.get(psa_sheet)
-                
+            if not cols and psa_sheet: cols = full_schema.get(psa_sheet)
             if cols:
-                df = df.reindex(columns=[c for c in cols if c in df.columns or True]) # Mantain order, allow new
-            
-            df.to_excel(writer, sheet_name=sheet_name[:31], index=False) # Excel sheet name limit
+                df = df.reindex(columns=[c for c in cols if c in df.columns or True])
+            df.to_excel(writer, sheet_name=sheet_name[:31], index=False)
             print(f"  Written {len(df)} rows to {sheet_name}")
             has_written = True
             
         if not has_written:
-            # Fallback to avoid "At least one sheet must be visible"
             pd.DataFrame([{"Info": "No data generated"}]).to_excel(writer, sheet_name="Empty_Report")
     
-    progress_tracker.update("✅ Generation complete!", details=f"Mockup saved to {os.path.basename(output_path)}")
     print(f"\n✅ Success! {measure_name} Mockup generated at {output_path}")
     return output_path
 
@@ -373,30 +292,41 @@ if __name__ == "__main__":
     parser.add_argument('--vsd', help='Path to VSD file')
     parser.add_argument('--no-ai', action='store_true', help='Disable AI extractor')
     parser.add_argument('--model', default='qwen2:0.5b', help='Ollama model name')
+    parser.add_argument('--skip-quality-check', action='store_true', help='Skip quality checks')
+    parser.add_argument('--validate-ncqa', action='store_true', help='Validate NCQA compliance')
     
     args = parser.parse_args()
-    
     measures = [m.strip() for m in args.measures.split(',')]
-    vsd_default = os.getenv('VSD_PATH', 'data/VSD_MY2026.xlsx')
-    vsd_path = args.vsd if args.vsd else vsd_default
+    vsd_path = args.vsd if args.vsd else os.getenv('VSD_PATH', 'data/VSD_MY2026.xlsx')
     
     print(f"🚀 Starting HEDIS Mockup Generation for: {', '.join(measures)}")
-    print(f"📚 Using VSD: {vsd_path}")
-    
     testcase_dir = os.getenv('TESTCASE_DIR', 'data')
     
     for measure in measures:
         tc_default = os.path.join(testcase_dir, f'{measure}_MY2026_TestCase.xlsx')
         tc_path = args.testcase if args.testcase else tc_default
-        # Try STANDARD format if default missing
+        
+        if not os.path.exists(tc_path) and not args.testcase:
+            if os.path.exists(measure):
+                tc_path = measure
+                measure = os.path.basename(measure).split('_')[0].upper()
+            else:
+                try:
+                    candidates = [f for f in os.listdir(testcase_dir) if f.upper().startswith(measure.upper()) and f.endswith(('.xlsx', '.csv'))]
+                    if candidates:
+                        tc_path = os.path.join(testcase_dir, candidates[0])
+                        print(f"🔍 Auto-detected test case: {tc_path}")
+                except:
+                    pass
+
         if not os.path.exists(tc_path) and not args.testcase:
             standard_path = f'data/{measure}_STANDARD.xlsx'
             if os.path.exists(standard_path): tc_path = standard_path
 
         run_measure_gen_custom(
-            measure, 
-            tc_path, 
-            vsd_path, 
-            disable_ai=args.no_ai,
-            model_name=args.model
+            measure, tc_path, vsd_path, 
+            disable_ai=args.no_ai, 
+            model_name=args.model,
+            skip_quality_check=args.skip_quality_check,
+            validate_ncqa=args.validate_ncqa
         )
