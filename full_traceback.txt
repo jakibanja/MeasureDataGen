@@ -1,0 +1,37 @@
+Starting generation wrapper...
+Running measure gen...
+📚 Loading VSD (first time only, this may take 10-30 seconds)...
+Loading VSD from C:\Users\sushi\Downloads\RAG-Tutorials-main\data\HEDIS MY 2026 Volume 2 Value Set Directory_2025-08-01.xlsx...
+VSD loaded with 179976 code entries.
+Valid codes for MY 2026: 179976
+   ✓ VSD loaded in 57.61s
+⚡ AI Extractor disabled (using regex-only mode for maximum speed)
+📋 Detected legacy format - using TestCaseParser
+MockupEngine initialized for PSA (MY 2026)
+
+--- Processing PSA ---
+Reading scenarios from data/PSA_MY2026_TestCase.xlsx...
+  Parsing sheet: PSA_Standard
+Found 332 scenarios.
+📊 Processing 332 scenarios...
+
+CRASH IN WRAPPER:
+Traceback (most recent call last):
+  File "C:\Users\sushi\Downloads\MeasMockD\run_debug.py", line 16, in <module>
+    main.run_measure_gen("PSA")
+  File "C:\Users\sushi\Downloads\MeasMockD\main.py", line 151, in run_measure_gen
+    return run_measure_gen_custom(measure_name, testcase_path, vsd_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sushi\Downloads\MeasMockD\main.py", line 106, in run_measure_gen_custom
+    result = _process_measure(measure_name, parser, engine, skip_quality_check=skip_quality_check, validate_ncqa=validate_ncqa)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sushi\Downloads\MeasMockD\main.py", line 229, in _process_measure
+    v_table, v_rows = engine.generate_visits(mem_id, spans=sc.get('visit_spans'))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sushi\Downloads\MeasMockD\src\engine.py", line 208, in generate_visits
+    d = self.parse_date_str(v['date'])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sushi\Downloads\MeasMockD\src\engine.py", line 75, in parse_date_str
+    date_str = date_str.lower().strip()
+               ^^^^^^^^^^^^^^
+AttributeError: 'datetime.datetime' object has no attribute 'lower'

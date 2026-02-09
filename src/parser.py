@@ -24,7 +24,7 @@ class TestCaseParser:
             
             for i, row in df_raw.iterrows():
                 row_str = " ".join([str(cell).lower() for cell in row])
-                if any(x in row_str for x in ['#tc', 'mem_nbr', 'member number', 'testcase id']):
+                if any(x in row_str for x in ['#tc', 'mem_nbr', 'member number', 'testcase id', 'member_id', 'member id']):
                     header_row_idx = i
                     break
             
@@ -43,48 +43,56 @@ class TestCaseParser:
                 'scenario': next((c for c in df.columns if 'scenario' in c.lower() or 'test objective' in c.lower()), None),
                 'objective': next((c for c in df.columns if 'objective' in c.lower()), None),
                 'expected': next((c for c in df.columns if 'expected' in c.lower()), None),
-                'period': next((c for c in df.columns if 'period' in c.lower() or 'enr_period' in c.lower()), None)
+                'period': next((c for c in df.columns if 'period' in c.lower() or 'enr_period' in c.lower()), None),
+                # ⚡ Capture all VISIT date columns
+                'visit_cols': sorted([c for c in df.columns if re.search(r'VISIT_\d+_DATE', c, re.IGNORECASE)])
             }
 
             current_sc = None
-            for _, row in df.iterrows():
-                tc_id_raw = str(row.get(col_map['id'], '')).strip()
-                
-                is_continuation = False
-                if tc_id_raw.lower() in ["nan", "none", "", "#", "#tc", "mem_nbr", "s.n"]:
-                    if current_sc:
-                        is_continuation = True
-                    else:
-                        continue
-                
-                if not is_continuation:
-                    if len(tc_id_raw) > 60: continue
-                    if any(x in tc_id_raw.lower() for x in ["verify if", "member has", "objective:"]): continue
+            for idx, row in df.iterrows():
+                try:
+                    tc_id_raw = str(row.get(col_map['id'], '')).strip()
                     
-                    scenario_text = str(row.get(col_map['scenario'], '')) if col_map['scenario'] else ""
-                    objective_text = str(row.get(col_map['objective'], '')) if col_map['objective'] else ""
-                    search_blob = (tc_id_raw + " " + scenario_text + " " + objective_text).lower()
-                    if measure_abbr not in search_blob and "all" not in search_blob and "psa" not in sheet_name.lower():
-                        continue
+                    is_continuation = False
+                    if tc_id_raw.lower() in ["nan", "none", "", "#", "#tc", "mem_nbr", "s.n"]:
+                        if current_sc:
+                            is_continuation = True
+                        else:
+                            continue
+                    
+                    if not is_continuation:
+                        if len(tc_id_raw) > 60: continue
+                        if any(x in tc_id_raw.lower() for x in ["verify if", "member has", "objective:"]): continue
                         
-                    current_sc = {
-                        "id": tc_id_raw,
-                        "scenario": scenario_text,
-                        "objective": objective_text,
-                        "expected": str(row.get(col_map['expected'], '')) if col_map['expected'] else "",
-                        "sheet": sheet_name,
-                        "age": 70, 
-                        "gender": 'M',
-                        "compliant": [],
-                        "excluded": [],
-                        "product_line": "Medicare",
-                        "enrollment_spans": [],
-                        "visit_spans": [],
-                        "overrides": {}
-                    }
-                    all_scenarios.append(current_sc)
-
-                self._parse_row_details(current_sc, row, col_map, sheet_name, measure_config)
+                        scenario_text = str(row.get(col_map['scenario'], '')) if col_map['scenario'] else ""
+                        objective_text = str(row.get(col_map['objective'], '')) if col_map['objective'] else ""
+                        search_blob = (tc_id_raw + " " + scenario_text + " " + objective_text).lower()
+                        if measure_abbr not in search_blob and "all" not in search_blob and "psa" not in sheet_name.lower():
+                            continue
+                            
+                        current_sc = {
+                            "id": tc_id_raw,
+                            "scenario": scenario_text,
+                            "objective": objective_text,
+                            "expected": str(row.get(col_map['expected'], '')) if col_map['expected'] else "",
+                            "sheet": sheet_name,
+                            "age": 70, 
+                            "gender": 'M',
+                            "compliant": [],
+                            "excluded": [],
+                            "product_line": "Medicare",
+                            "enrollment_spans": [],
+                            "visit_spans": [],
+                            "overrides": {}
+                        }
+                        all_scenarios.append(current_sc)
+    
+                    self._parse_row_details(current_sc, row, col_map, sheet_name, measure_config)
+                except Exception as e:
+                    print(f"❌ Error parsing row {idx} in {sheet_name}: {e}")
+                    # print(f"Row content: {row.to_dict()}")
+                    import traceback
+                    traceback.print_exc()
 
         return all_scenarios
 
@@ -251,6 +259,25 @@ class TestCaseParser:
                             'date': d,
                             'type': 'Outpatient' 
                         })
+
+        # 5. ⚡ Structured Visits (New logic)
+        if col_map.get('visit_cols'):
+            for date_col in col_map['visit_cols']:
+                date_val = row.get(date_col)
+                if pd.notna(date_val):
+                    # Find corresponding TYPE column (VISIT_1_DATE -> VISIT_1_TYPE)
+                    # Use index search to be robust against slight naming variations
+                    prefix = str(date_col).replace('DATE', '').replace('date', '') 
+                    type_col = next((c for c in row.index if str(c).startswith(prefix) and 'TYPE' in str(c).upper()), None)
+                    
+                    type_val = row.get(type_col) if type_col else "Outpatient"
+                    if pd.isna(type_val) or str(type_val).strip() == "":
+                        type_val = "Outpatient"
+                    
+                    parsed_sc["visit_spans"].append({
+                        'date': date_val,
+                        'type': str(type_val).strip()
+                    })
 
         # --- AI Fallback Logic ---
         # If regex failed to find any enrollment spans, try the AI extractor

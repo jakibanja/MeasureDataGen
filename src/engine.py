@@ -1,4 +1,5 @@
 import yaml
+import re
 import pandas as pd
 from datetime import datetime, timedelta
 from faker import Faker
@@ -72,7 +73,12 @@ class MockupEngine:
 
     def parse_date_str(self, date_str):
         # Handle "1/1/MY", "12/31/MY-1", "1/1/2050"
-        date_str = date_str.lower().strip()
+        
+        # ⚡ Robustness: specific handle for non-string types (already dates)
+        if hasattr(date_str, 'strftime'):
+            return date_str
+            
+        date_str = str(date_str).lower().strip()
         str_year = str(self.year)
         
         # Replace MY+/-offset
@@ -81,12 +87,12 @@ class MockupEngine:
             offset = 0
             if 'my-' in date_str:
                 parts = date_str.split('my-')
-                if len(parts) > 1 and parts[1][0].isdigit():
+                if len(parts) > 1 and len(parts[1]) > 0 and parts[1][0].isdigit():
                     offset = -int(parts[1][0])
                     date_str = date_str.replace(f"my{offset}", str(self.year + offset))
             elif 'my+' in date_str:
                  parts = date_str.split('my+')
-                 if len(parts) > 1 and parts[1][0].isdigit():
+                 if len(parts) > 1 and len(parts[1]) > 0 and parts[1][0].isdigit():
                     offset = int(parts[1][0])
                     date_str = date_str.replace(f"my+{offset}", str(self.year + offset))
             
@@ -206,41 +212,88 @@ class MockupEngine:
             
         for i, v in enumerate(spans):
             d = self.parse_date_str(v['date'])
-            v_type = v.get('type', 'Outpatient')
+            v_type = str(v.get('type', 'Outpatient')).strip()
             
-            # ⚡ Dynamic Code Selection based on Visit Type
+            # ⚡ Dynamic Code Selection based on Visit Type (Code vs Description)
             cpt_code = "99213"  # Default Outpatient
             diag_code = "Z00.00"
             pos_code = "11"     # Office
-            
-            if "Inpatient" in v_type:
-                cpt_code = "99221"
-                pos_code = "21" # Inpatient Hospital
-            elif "ED" in v_type or "Emergency" in v_type:
-                cpt_code = "99281"
-                pos_code = "23" # Emergency Room
-            elif "Telehealth" in v_type:
-                pos_code = "02" # Telehealth
-            
-            if self.vsd_manager:
-                # 1. Try to find CPT code matching the visit type
-                vsd_cpt = self.vsd_manager.get_random_code_from_pattern(v_type)
-                if not vsd_cpt and "Outpatient" not in v_type:
-                    vsd_cpt = self.vsd_manager.get_random_code_from_pattern("Outpatient")
-                if vsd_cpt: cpt_code = vsd_cpt
-                
-                # 2. Try to get a relevant diagnosis code
-                vsd_diag = self.vsd_manager.get_random_code_from_pattern("Diagnosis")
-                if vsd_diag: diag_code = vsd_diag
+            rev_code = ""
 
-            rows.append({
+            resolved_code = None
+            resolved_system = "Unknown"
+            
+            is_explicit_code = False
+            
+            # 1. explicit code check
+            # Heuristic: Uppercase alphanumeric, 3-7 chars, no spaces = Code
+            if re.match(r'^[A-Z0-9]{3,7}$', v_type, re.IGNORECASE):
+                 if v_type.upper() not in ["OFFICE", "HOME", "VISIT", "LTC", "SNF", "ED", "ER", "URGENT", "CLINIC"]:
+                     resolved_code = v_type.upper()
+                     is_explicit_code = True
+                     # Lookup system in VSD
+                     if self.vsd_manager:
+                         sys = self.vsd_manager.get_code_system(resolved_code)
+                         if sys != 'Unknown':
+                             resolved_system = sys
+                         else:
+                             # Inference fallback
+                             if len(resolved_code) == 3 and resolved_code.isdigit(): resolved_system = 'UBREV'
+                             elif '.' in resolved_code: resolved_system = 'ICD-10-CM'
+                             else: resolved_system = 'CPT'
+            
+            # 2. Value Set Lookup (if not explicit code)
+            if not is_explicit_code:
+                # Text-based Logic for Pos/Defaults
+                if "Inpatient" in v_type:
+                    cpt_code = "99221"; pos_code = "21"
+                elif "ED" in v_type or "Emergency" in v_type:
+                    cpt_code = "99281"; pos_code = "23"
+                elif "Telehealth" in v_type:
+                    pos_code = "02"
+
+                if self.vsd_manager:
+                    # Find code from pattern
+                    candidates = self.vsd_manager.find_value_sets(v_type)
+                    if not candidates and "Outpatient" not in v_type and "Inpatient" not in v_type:
+                         candidates = self.vsd_manager.find_value_sets("Outpatient")
+                    
+                    if candidates:
+                        # Pick random value set, then random code
+                        vs_name = candidates[0] 
+                        code = self.vsd_manager.get_random_code(vs_name)
+                        if code:
+                            resolved_code = code
+                            resolved_system = self.vsd_manager.get_code_system(code)
+            
+            # 3. ⚡ Smart Routing
+            if resolved_code:
+                sys_upper = str(resolved_system).upper()
+                if any(x in sys_upper for x in ['CPT', 'HCPCS', 'PROCEDURE']):
+                    cpt_code = resolved_code
+                elif any(x in sys_upper for x in ['ICD', 'DIAGNOSIS', 'CM']):
+                    diag_code = resolved_code
+                elif any(x in sys_upper for x in ['REV', 'UBREV', 'REVENUE']):
+                    rev_code = resolved_code
+
+            # Always try to get a relevant diagnosis code if we don't have one yet
+            # (Or if the resolved code was a Procedure, we still need a Diag)
+            if diag_code == "Z00.00" and self.vsd_manager:
+                 vsd_diag = self.vsd_manager.get_random_code_from_pattern("Diagnosis")
+                 if vsd_diag: diag_code = vsd_diag
+
+            row_data = {
                 target_table['fk']: mem_id,
                 target_table['pk']: f"C_{mem_id}_{i+1:02d}",
                 target_table['fields']['date']: d,
                 target_table['fields']['pos']: pos_code,
                 "CPT_1": cpt_code,
                 "DIAG_I_1": diag_code
-            })
+            }
+            if rev_code:
+                row_data["REVENUE_CODE"] = rev_code
+                
+            rows.append(row_data)
         
         return target_table['name'], rows
 
