@@ -188,17 +188,32 @@ class VSDManager:
     def get_codes(self, value_set_name, validate_dates=True):
         """
         Returns a list of codes for a given value set name.
-        Uses fast O(1) lookup.
+        Uses fast O(1) lookup with fuzzy fallback.
         """
         key = value_set_name.lower().strip()
         
-        # If validate_dates is True (default), use our pre-filtered map
-        if validate_dates:
-            return self.vsd_map.get(key, [])
+        # 1. Try Exact Match
+        codes = self.vsd_map.get(key)
+        
+        # 2. ⚡ Fuzzy Fallback (Case-insensitive search in unique names)
+        if codes is None:
+            # Look for a name that contains the requested name, or vice versa
+            matches = [n for n in self.unique_names if key in n or n in key]
+            if matches:
+                # Prioritize shortest match (usually the most generic one)
+                matches.sort(key=len)
+                key = matches[0]
+                codes = self.vsd_map.get(key)
+                # print(f"    ✨ Fuzzy-matched '{value_set_name}' to '{key}'")
+        
+        # 3. Final extraction
+        if codes is not None:
+            if validate_dates: return codes
+            # Slow fallback for non-date-validated (rare)
+            matches_df = self.df[self.df['Value Set Name'].str.lower() == key]
+            return matches_df['Code'].tolist()
             
-        # Fallback to slow DF lookup if we need invalid dates (rare)
-        matches = self.df[self.df['Value Set Name'].str.lower() == key]
-        return matches['Code'].tolist()
+        return []
 
     def get_random_code(self, value_set_name, validate_dates=True):
         """
