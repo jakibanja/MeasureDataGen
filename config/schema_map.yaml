@@ -30,6 +30,14 @@ tables:
       end_date: "ENR_END"
       benefit_medical: "BEN_MEDICAL"
       benefit_rx: "BEN_RX"
+      benefit_dent: "BEN_DENT"
+      benefit_mh_inp: "BEN_MH_INP"
+      benefit_mh_int: "BEN_MH_INT"
+      benefit_mh_amb: "BEN_MH_AMB"
+      benefit_cd_inp: "BEN_CD_INP"
+      benefit_cd_int: "BEN_CD_INT"
+      benefit_cd_amb: "BEN_CD_AMB"
+      benefit_cd_amp: "BEN_CD_AMP"
 
   # Medical Claims / Visits
   visit:
@@ -86,3 +94,21 @@ tables:
       loinc: "LOINC"
       cpt: "LAB_CPT"
       value: "LAB_VALUE"
+
+# ⚡ Benefit Group Logic
+benefit_profiles:
+  BEN_MEDICAL:
+    - BEN_MEDICAL
+    - BEN_MH_INP
+    - BEN_MH_INT
+    - BEN_MH_AMB
+    - BEN_CD_INP
+    - BEN_CD_INT
+    - BEN_CD_AMB
+    - BEN_CD_AMP
+
+  BEN_RX:
+    - BEN_RX
+
+  BEN_DENT:
+    - BEN_DENT

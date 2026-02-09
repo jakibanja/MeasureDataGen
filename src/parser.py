@@ -1,10 +1,21 @@
 import pandas as pd
 import re
+import yaml
+import os
 
 class TestCaseParser:
     def __init__(self, file_path, extractor=None):
         self.file_path = file_path
         self.extractor = extractor
+        self.benefit_profiles = {}
+        try:
+             config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'schema_map.yaml')
+             if os.path.exists(config_path):
+                 with open(config_path, 'r') as f:
+                     cfg = yaml.safe_load(f)
+                     self.benefit_profiles = cfg.get('benefit_profiles', {})
+        except Exception as e:
+             print(f"Warning: Could not load benefit profiles: {e}")
         
     def parse_scenarios(self, measure_config):
         xl = pd.ExcelFile(self.file_path)
@@ -45,7 +56,9 @@ class TestCaseParser:
                 'expected': next((c for c in df.columns if 'expected' in c.lower()), None),
                 'period': next((c for c in df.columns if 'period' in c.lower() or 'enr_period' in c.lower()), None),
                 # ⚡ Capture all VISIT date columns
-                'visit_cols': sorted([c for c in df.columns if re.search(r'VISIT_\d+_DATE', c, re.IGNORECASE)])
+                'visit_cols': sorted([c for c in df.columns if re.search(r'VISIT_\d+_DATE', c, re.IGNORECASE)]),
+                # ⚡ Capture all BEN_ columns
+                'benefit_cols': [c for c in df.columns if str(c).upper().startswith('BEN_')]
             }
 
             current_sc = None
@@ -164,6 +177,23 @@ class TestCaseParser:
                     parsed_sc["excluded"].append(excl['name'])
         
         # 3.5 Specific Field Overrides (Field=1, Field=0, No Field)
+        
+        # ⚡ Process explicit Benefit Columns (BEN_MEDICAL, etc.) from col_map
+        if col_map.get('benefit_cols'):
+            for ben_col in col_map['benefit_cols']:
+                val = row.get(ben_col)
+                if pd.notna(val):
+                    # Store as override (e.g. BEN_MEDICAL = val)
+                    col_upper = ben_col.upper()
+                    
+                    # ⚡ Check if mapped to a profile (e.g. BEN_MEDICAL -> [List of 10 cols])
+                    if col_upper in self.benefit_profiles:
+                        for mapped_col in self.benefit_profiles[col_upper]:
+                            parsed_sc["overrides"][mapped_col] = val
+                    else:
+                        # Direct assignment
+                        parsed_sc["overrides"][col_upper] = val
+
         # Look for patterns like BEN_MH_INP=0 or HOSPICE=1
         field_matches = re.findall(r'(\b[a-zA-Z0-9_]+\b)\s*[:=]\s*([01])', blob_full)
         for field, val in field_matches:
