@@ -137,6 +137,24 @@ class StandardFormatParser:
             if re.search(rf'\bne\s*[:=]\s*{kw.lower()}', desc) and kw not in scenario['excluded']:
                 scenario['excluded'].append(kw)
 
+        # ⚡ Dynamic Passthrough: Catch-All for unknown columns
+        # Any column NOT in this reserved list is treated as a direct override
+        reserved_prefixes = ['MEMBER_ID', 'AGE', 'GENDER', 'PRODUCT_LINE', 'SCENARIO', 'EXPECTED', 'ENROLLMENT_', 'VISIT_', 'EVENT_', 'EXCLUSION_', 'NOTES']
+        
+        for col in row.index:
+            col_str = str(col).strip().upper()
+            if not any(col_str.startswith(prefix) for prefix in reserved_prefixes):
+                # It's a custom column! (e.g. MEM_CITY, PROV_NPI)
+                val = row[col]
+                if pd.notna(val):
+                    # Add to overrides['member'] or just 'overrides' depending on your engine logic
+                    # For now, we put it in overrides['custom_columns'] and let Engine handle it, 
+                    # OR we can just put it in the main specific override dict if we know the table.
+                    # A safer bet is to assume it maps to MEMBER table or a specific table key if prefixed (e.g. MEMBER_IN.MEM_CITY)
+                    
+                    # Simple strategy: Direct key-value override
+                    scenario['overrides'][col_str] = str(val).strip()
+
         return scenario
     
     def _parse_enrollments(self, row: pd.Series) -> List[Dict[str, Any]]:
@@ -266,7 +284,14 @@ class StandardFormatParser:
                     # Initialize overrides['events'] if it doesn't exist
                     # We'll use the matched name for linking
                     if 'events' not in overrides: overrides['events'] = {}
-                    overrides['events'][event_name_matched] = event_meta
+                    # Store as list to support multiple events of same type
+                    if event_name_matched not in overrides['events']:
+                        overrides['events'][event_name_matched] = []
+                    elif isinstance(overrides['events'][event_name_matched], dict):
+                         # Convert legacy dict to list if needed
+                         overrides['events'][event_name_matched] = [overrides['events'][event_name_matched]]
+                    
+                    overrides['events'][event_name_matched].append(event_meta)
         
         return compliant
 

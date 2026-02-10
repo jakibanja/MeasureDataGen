@@ -1,11 +1,12 @@
 import yaml
 import re
+import os
 import pandas as pd
 from datetime import datetime, timedelta
 from faker import Faker
 
 class MockupEngine:
-    def __init__(self, measure_config_path, schema_path, vsd_manager=None, year=2026, measure_name_override=None):
+    def __init__(self, measure_config_path, schema_path, vsd_manager=None, year=2026, measure_name_override=None, mocking_depth='population', column_scope='all'):
         with open(measure_config_path, 'r') as f:
             self.measure = yaml.safe_load(f)
         
@@ -22,10 +23,20 @@ class MockupEngine:
         self.year = year
         self.fake = Faker()
         self.vsd_manager = vsd_manager
+        self.mocking_depth = mocking_depth
+        self.column_scope = column_scope
         
-        print(f"MockupEngine initialized for {measure_name} (MY {year})")
+        print(f"MockupEngine initialized for {measure_name} (MY {year}) | Depth={mocking_depth}, Scope={column_scope}")
         
-        # Product Line Mapping (Unified)
+        # ⚡ Professional Config: Load Product Line IDs from file
+        product_config_path = os.path.join(os.path.dirname(measure_config_path), 'products.yaml')
+        if os.path.exists(product_config_path):
+            with open(product_config_path, 'r') as f:
+                self.product_config = yaml.safe_load(f)
+        else:
+            self.product_config = {}
+
+        # Product Line Mapping (Unified) - Keep for backward compatibility
         self.pl_map = {
             "Medicare": 1,
             "Commercial": 2,
@@ -202,13 +213,18 @@ class MockupEngine:
         
         return rows
 
-    def generate_visits(self, mem_id, spans=None):
+    def generate_visits(self, mem_id, spans=None, overrides=None, product_line='COMMERCIAL'):
         target_table = self.schema['tables']['visit']
         rows = []
         
-        # If no explicit spans, default to single Outpatient visit
+        # If no explicit spans
         if not spans:
-            spans = [{'date': datetime(self.year, 2, 1), 'type': 'Outpatient'}]
+            if self.mocking_depth == 'scenario':
+                # Skip default/random visit for cleaner "scenario-only" output
+                return target_table['name'], []
+            else:
+                # Default "population" behavior: always has one visit
+                spans = [{'date': datetime(self.year, 2, 1), 'type': 'Outpatient'}]
             
         for i, v in enumerate(spans):
             d = self.parse_date_str(v['date'])
@@ -293,36 +309,136 @@ class MockupEngine:
             if rev_code:
                 row_data["REVENUE_CODE"] = rev_code
                 
+            # 4. ⚡ Apply Pinned Overrides (V1: DIAG=...)
+            if overrides and 'pinned_visits' in overrides:
+                # 1-based index support (V1 matches i=0)
+                visit_idx = i + 1
+                if visit_idx in overrides['pinned_visits']:
+                    specific_meta = overrides['pinned_visits'][visit_idx]
+                    for k, v in specific_meta.items():
+                        # robust mapping
+                        # 1. Check if key is a direct physical column (e.g. CPT_1)
+                        if k in row_data:
+                            row_data[k] = v
+                        # 2. Check if key matches a logical field name (e.g. 'pos' -> 'POS')
+                        elif k.lower() in target_table['fields']:
+                            phy_col = target_table['fields'][k.lower()]
+                            row_data[phy_col] = v
+                        # 3. Fallback: Upper case key matches physical column?
+                        elif k.upper() in row_data:
+                             row_data[k.upper()] = v
+                        else:
+                             # 4. Insert as-is (might be a new column not in standard schema)
+                             row_data[k] = v
+
+            # Populate extra fields if scope is 'all'
+            if self.column_scope == 'all':
+                # Determine product line from overrides or default? Use generic default for now as standard visits don't carry PL info yet
+                self._populate_visit_fields(row_data, target_table, mem_id, product_line=product_line)
+
             rows.append(row_data)
         
         return target_table['name'], rows
 
+    def generate_composite_event(self, mem_id, component_config, base_date, overrides=None, product_line='COMMERCIAL'):
+        """
+        Generates multiple events based on a complex component definition.
+        """
+        events = []
+        count = component_config.get('count', 1)
+        sub_events = component_config.get('events', [])
+        
+        # If no explicit sub-events, treat config itself as one
+        if not sub_events:
+            sub = component_config.copy()
+            # Ensure it has basic fields
+            if 'table' not in sub: sub['table'] = 'visit'
+            if 'value_set_names' not in sub: sub['value_set_names'] = []
+            sub_events = [sub]
+
+        for i in range(count):
+            # Stagger dates: Each iteration moves forward
+            # Base date + (Iteration * Separation)
+            sep = component_config.get('min_separation_days', 7)
+            date_offset = i * sep
+            
+            for sub in sub_events:
+                 # Override logic for the sub-event
+                 sub_overrides = overrides.copy() if overrides else {}
+                 sub_overrides['force_table'] = sub.get('table', 'visit')
+                 if sub.get('value_set_names'):
+                    sub_overrides['force_vs_names'] = sub['value_set_names']
+                 if sub.get('diagnosis_pattern'):
+                    sub_overrides['force_diag_pattern'] = sub['diagnosis_pattern']
+                 
+                 # Call standard generator
+                 # We calculate offset_days relative to Jan 1 to keep API consistent
+                 dt_target = base_date + timedelta(days=date_offset)
+                 dt_jan1 = datetime(self.year, 1, 1)
+                 offset = (dt_target - dt_jan1).days
+
+                 t_name, row = self.generate_clinical_event(
+                    mem_id, 
+                    component_name=f"Composite_{i}", # Dummy
+                    is_compliant=True, 
+                    offset_days=offset, 
+                    overrides=sub_overrides, 
+                    product_line=product_line
+                 )
+                 events.append((t_name, row))
+        return events
+
     def generate_clinical_event(self, mem_id, component_name, is_compliant=True, offset_days=0, overrides=None, product_line='COMMERCIAL'):
         # Locate component in measure config
-        component = next((c for c in self.measure['rules']['clinical_events']['numerator_components'] if c['name'] == component_name), None)
+        vs_name = None
         
-        if component:
-            table_key = component['table'] # e.g. "lab", "visit"
+        # ⚡ Composite Override Support (Priority 1)
+        if overrides and 'force_table' in overrides:
+             table_key = overrides['force_table']
+             # Create dummy component config
+             component = {
+                 'name': component_name,
+                 'table': table_key,
+                 'value_set_names': overrides.get('force_vs_names', []),
+                 'diagnosis_pattern': overrides.get('force_diag_pattern')
+             }
+             if overrides.get('force_vs_names'):
+                 vs_name = overrides['force_vs_names'][0] # Use first VS name for logging
         else:
-            # ⚡ Universal Support: Smart-default table based on name
-            table_key = 'visit'
-            if "BMI" in component_name or "Weight" in component_name:
-                table_key = 'emr'
-            elif "PSA" in component_name or "Lab" in component_name:
-                table_key = 'lab'
-            elif "Medication" in component_name or "Drug" in component_name or "Rx" in component_name:
-                table_key = 'rx'
-                
-            # Create a dummy component for logic below
-            component = {
-                'name': component_name,
-                'table': table_key,
-                'value_set_names': [component_name] # Fallback
-            }
+            # Check Numerator Components (Standard)
+            component = next((c for c in self.measure['rules']['clinical_events']['numerator_components'] if c['name'] == component_name), None)
+            
+            # Check Denominator Components (New for Complex Measures)
+            if not component and 'denominator_components' in self.measure['rules']['clinical_events']:
+                 component = next((c for c in self.measure['rules']['clinical_events']['denominator_components'] if c['name'] == component_name), None)
+                 if component:
+                     # If found in denominator list, check if it's complex
+                     if component.get('count', 1) > 1 or component.get('events'):
+                         return self.generate_composite_event(mem_id, component, datetime(self.year, 1, 1), overrides, product_line)
+
+            if component:
+                table_key = component['table'] # e.g. "lab", "visit"
+            else:
+                # ⚡ Universal Support: Smart-default table based on name
+                table_key = 'visit'
+                if "BMI" in component_name or "Weight" in component_name:
+                    table_key = 'emr'
+                elif "PSA" in component_name or "Lab" in component_name:
+                    table_key = 'lab'
+                elif "Medication" in component_name or "Drug" in component_name or "Rx" in component_name:
+                    table_key = 'rx'
+                    
+                # Create a dummy component for logic below
+                component = {
+                    'name': component_name,
+                    'table': table_key,
+                    'value_set_names': [component_name] # Fallback
+                }
 
         if table_key not in self.schema['tables']:
-            # Fallback for old configs that might still use PSA_...
-            table_raw = table_key.replace('PSA_', '').replace('_IN', '').lower()
+            # Fallback for old configs that might still use [MEASURE]_...
+            measure_prefix = f"{self.measure.get('measure_name', 'PSA')}_"
+            table_raw = table_key.replace(measure_prefix, '').replace('_IN', '').lower()
             if 'VISIT' in table_raw.upper(): table_key = 'visit'
             elif 'EMR' in table_raw.upper(): table_key = 'emr'
             elif 'LAB' in table_raw.upper(): table_key = 'lab'
@@ -337,8 +453,18 @@ class MockupEngine:
         specific_value = None
         specific_days = 30
         specific_qty = 30
-        if overrides and 'events' in overrides and component_name in overrides['events']:
+        
+        # Priority 1: Specific metadata passed directly (for multi-event scenarios)
+        meta = overrides.get('specific_metadata')
+        
+        # Priority 2: Global overrides by name (legacy/single-event support)
+        if not meta and overrides and 'events' in overrides and component_name in overrides['events']:
             meta = overrides['events'][component_name]
+            # Handle list-based metadata (take first if list) - fallback
+            if isinstance(meta, list) and meta:
+                meta = meta[0]
+
+        if meta:
             if 'date' in meta:
                 try:
                     event_date = self.parse_date_str(meta['date'])
@@ -387,15 +513,19 @@ class MockupEngine:
             else:
                 row['_CODE'] = 'MANUAL'
             
-            # ⚡ ALWAYS populate mandatory RX fields if targeting the RX table
-            if table_key == 'rx':
-                self._populate_rx_fields(row, target_table, mem_id, product_line=product_line)
+            # ⚡ Populate detailed fields only if requested scope is 'all'
+            if self.column_scope == 'all':
+                if table_key == 'rx':
+                    self._populate_rx_fields(row, target_table, mem_id, product_line=product_line)
+                elif table_key == 'visit':
+                    self._populate_visit_fields(row, target_table, mem_id, product_line=product_line)
 
-            # Add a realistic diagnosis if it's a visit
-            if table_key == 'visit' and self.vsd_manager:
+            # Add a realistic diagnosis if it's a visit (Force it even if code wasn't found)
+            if table_key == 'visit' and self.vsd_manager and not row.get("DIAG_I_1"):
                 diag = self.vsd_manager.get_random_code_from_pattern("Diagnosis")
                 if diag: row["DIAG_I_1"] = diag
-                row['_VALUE_SET_NAME'] = 'MANUAL'
+            
+            row['_VALUE_SET_NAME'] = vs_name if vs_name else 'MANUAL'
 
             # --- Measure-Specific Post-Processing ---
             if component_name == "BMI Percentile":
@@ -417,7 +547,7 @@ class MockupEngine:
                 for f, v in overrides.items():
                     if f in row: row[f] = v
 
-        return target_table['name'], row
+        return table_key, row
 
     def _populate_rx_fields(self, row, target_table, mem_id, product_line='COMMERCIAL'):
         """Populates rich metadata for pharmacy claims using schema mapping."""
@@ -439,7 +569,36 @@ class MockupEngine:
         
         # Product Context
         if 'product_id' in fields: 
-            row[fields['product_id']] = product_line.upper()
+            prod_info = self.product_config.get(product_line.upper(), {})
+            row[fields['product_id']] = prod_info.get('id', product_line.upper())
+
+    def _populate_visit_fields(self, row, target_table, mem_id, product_line='COMMERCIAL'):
+        """Populates rich metadata for medical visits (Claims, POS, NPIs)."""
+        fields = target_table.get('fields', {})
+        import time
+        
+        # Claim Identity
+        if 'claim_id' in fields:
+            row[fields['claim_id']] = f"CL_{mem_id}_{int(time.time())}"
+        
+        # Claim Status
+        if 'claim_status' in fields: row[fields['claim_status']] = 'P' # Paid
+        
+        # Place of Service (Default to Office=11)
+        if 'pos' in fields: row[fields['pos']] = '11'
+        
+        # Provider Context
+        if 'prov_nbr' in fields: row[fields['prov_nbr']] = 'PROV789'
+        # Match schema_map.yaml key 'provider_npi'
+        if 'provider_npi' in fields: row[fields['provider_npi']] = '1122334455'
+        elif 'prov_npi' in fields: row[fields['prov_npi']] = '1122334455' # Fallback
+        
+        if 'tin' in fields: row[fields['tin']] = '99-8887776'
+        
+        # Product Context
+        if 'product_id' in fields:
+            prod_info = self.product_config.get(product_line.upper(), {})
+            row[fields['product_id']] = prod_info.get('id', product_line.upper())
 
     def generate_exclusion(self, mem_id, exclusion_name, overrides=None):
         # Find exclusion in config

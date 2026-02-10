@@ -139,27 +139,38 @@ CRITICAL INSTRUCTIONS:
     def _parse_json_response(self, response: str) -> Dict:
         """
         Parse JSON from LLM response, handling common formatting issues.
-        
-        Args:
-            response: Raw LLM response
-            
-        Returns:
-            Parsed JSON dictionary
         """
         # Clean up response
         response = response.strip()
         
-        # Try to extract JSON if wrapped in markdown code blocks
-        json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response, re.DOTALL)
+        # 1. Try to find JSON block in Markdown
+        json_match = re.search(r'```(?:json)?\s*([\[\{].*?[\]\}])\s*```', response, re.DOTALL)
         if json_match:
             response = json_match.group(1)
-        
-        # Find first { and last }
-        start = response.find('{')
-        end = response.rfind('}')
-        
-        if start != -1 and end != -1:
-            response = response[start:end+1]
+        else:
+            # 2. Fallback: Find first [ or { and last ] or }
+            start_bracket = response.find('[')
+            start_brace = response.find('{')
+            
+            if start_bracket != -1 and (start_brace == -1 or start_bracket < start_brace):
+                # Validating List
+                start = start_bracket
+                end = response.rfind(']')
+            elif start_brace != -1:
+                # Validating Object
+                start = start_brace
+                end = response.rfind('}')
+            else:
+                start = -1
+                end = -1
+            
+            if start != -1 and end != -1:
+                response = response[start:end+1]
+
+        # 3. Fix Python-isms (None -> null, True -> true)
+        response = re.sub(r'\bNone\b', 'null', response)
+        response = re.sub(r'\bTrue\b', 'true', response)
+        response = re.sub(r'\bFalse\b', 'false', response)
         
         try:
             return json.loads(response)
@@ -170,6 +181,7 @@ CRITICAL INSTRUCTIONS:
             try:
                 return json.loads(response)
             except:
+                print(f"FAILED JSON RAW: {response}") # Debug logging
                 raise Exception(f"Could not parse JSON: {response[:200]}...")
     
     def extract_scenario_info(self, test_case_row: Dict) -> Dict:

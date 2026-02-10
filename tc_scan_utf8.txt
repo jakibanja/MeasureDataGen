@@ -1,0 +1,47 @@
+File: data/PSA_MY2026_TestCase.xlsx
+Sheets: ['PSA_Standard']
+
+--- Sheet: PSA_Standard ---
+Shape: (15, 38)
+Row 0: MEMBER_ID | AGE | GENDER | PRODUCT_LINE | ENROLLMENT_1_START | ENROLLMENT_1_END | ENROLLMENT_1_PRODUCT_ID | ENROLLMENT_2_START | ENROLLMENT_2_END | ENROLLMENT_2_PRODUCT_ID | ENROLLMENT_3_START | ENROLLMENT_3_END | ENROLLMENT_3_PRODUCT_ID | ENROLLMENT_4_START | ENROLLMENT_4_END | ENROLLMENT_4_PRODUCT_ID | ENROLLMENT_5_START | ENROLLMENT_5_END | ENROLLMENT_5_PRODUCT_ID | VISIT_1_DATE | VISIT_1_TYPE | VISIT_2_DATE | VISIT_2_TYPE | VISIT_3_DATE | VISIT_3_TYPE | VISIT_4_DATE | VISIT_4_TYPE | VISIT_5_DATE | VISIT_5_TYPE | PSA_TEST | PSA_TEST_DATE | HOSPICE | HOSPICE_DATE | PROSTATE_CANCER | DECEASED | DECEASED_DATE | EXPECTED_RESULT | SCENARIO_DESCRIPTION
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 1: PSA_PL_COMMERCIAL | 70 | M | Commercial | 1/1/MY | 12/31/MY | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member belongs to Commercial
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 2: PSA_PL_MEDICAID | 70 | M | Medicaid | 1/1/MY | 12/31/MY | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member belongs to Medicaid
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 3: PSA_PL_MEDICARE | 70 | M | Medicare | 1/1/MY | 12/31/MY | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member belongs to Medicare
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 4: PSA_PL_EXCHANGE | 70 | M | Exchange | 1/1/MY | 12/31/MY | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member belongs to Exchange
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 5: PSA_AG_01 | 70 | M | Medicare | 1/1/MY | 12/31/MY | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member is (male) 70 years as of December 31 of the measurement year.
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 6: PSA_AG_02 | 100 | M | Medicare | 1/1/MY | 12/31/MY | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member is (male) 100 years as of December 31 of the measurement year.
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 7: PSA_AG_03 | 69 | M | Medicare | 1/1/MY | 12/31/MY | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member is (male) 69 years as of December 31 of the measurement year.
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 8: PSA_AG_04 | 70 | M | Medicare | 1/1/MY | 12/31/MY | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member is (male) 70 years as of Jan 1st of the measurement year.
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 9: PSA_AG_05 | 70 | F | Medicare | 1/1/MY | 12/31/MY | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member is (Female) 70 years as of December 31 of the measurement year.
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 10: PSA_AG_06 | 70 | M | Medicare | 1/1/MY | 12/31/MY | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member is (other) 70 years as of December 31 of the measurement year.
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 11: PSA_CE_01 | 70 | M | Medicare | 1/1/MY-1 | 12/31/MY | 1/1/MY- | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member is enrolled in the measurement year. No gaps
+CE:
+1/1/MY-1 TO 12/31/MY
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 12: PSA_CE_02 | 70 | M | Medicare | 1/1/MY-1 | 10/1/MY | 11/14/MY | 12/31/MY | 1/1/MY- | 11/14/M | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member is enrolled in the measurement year. 44 days
+CE:
+1/1/MY-1 TO 10/1/MY
+11/14/MY TO 12/31/MY
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 13: PSA_CE_03 | 70 | M | Medicare | 1/1/MY-1 | 10/1/MY | 11/15/MY | 12/31/MY | 1/1/MY- | 11/15/M | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member is enrolled in the measurement year. Exact 45 days
+CE:
+1/1/MY-1 TO 10/1/MY
+11/15/MY TO 12/31/MY
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'
+Row 14: PSA_CE_04 | 70 | M | Medicare | 1/1/MY-1 | 10/1/MY | 10/21/MY | 11/1/MY | 11/21/MY | 12/31/MY | 1/1/MY- | 10/21/M | 11/21/M | 1 | 0 | 0 | 0 | Not Tested | Verify, if a member is enrolled in the measurement year. Two gaps of 20 days
+CE:
+1/1/MY-1 TO 10/1/MY
+10/21/MY TO 11/1/MY
+11/21/MY TO 12/31/MY
+  [NO MATCH] checked: '#tc', 'mem_nbr', 'member number', 'testcase id'

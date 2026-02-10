@@ -132,6 +132,30 @@ def index():
                 if validate_ncqa:
                     flash(f"🔍 Validating against NCQA specification...", "info")
                 
+                # Get generation settings
+                mocking_depth = request.form.get('mocking_depth', 'population')
+                column_scope = request.form.get('column_scope', 'all')
+                
+                # Show settings info
+                if mocking_depth == 'scenario':
+                    flash(f"🎯 Scenario Mode: Generating only explicit events (clean output)", "info")
+                if column_scope == 'mandatory':
+                    flash(f"📉 Lean Mode: Generating only mandatory compliance fields", "info")
+
+                # Handle Delta Run
+                baseline_path = None
+                delta_run = request.form.get('delta_run') == 'on'
+                
+                if delta_run:
+                    if 'baseline_file' in request.files and request.files['baseline_file'].filename:
+                        bl_file = request.files['baseline_file']
+                        baseline_path = os.path.join(UPLOAD_FOLDER, f"{measure}_MY2025_Baseline.xlsx")
+                        bl_file.save(baseline_path)
+                        flash(f"🔍 Delta Run Enabled: Comparing against {bl_file.filename}", "info")
+                    else:
+                        flash("⚠️ Delta Run requested but no Baseline File uploaded. Running full generation.", "warning")
+                        delta_run = False
+
                 # Run generation with options
                 output_file = run_measure_gen_custom(
                     measure, 
@@ -140,7 +164,11 @@ def index():
                     skip_quality_check=skip_quality_check,
                     disable_ai=disable_ai,
                     validate_ncqa=validate_ncqa,
-                    model_name=model_name
+                    model_name=model_name,
+                    mocking_depth=mocking_depth,
+                    column_scope=column_scope,
+                    baseline_path=baseline_path,
+                    delta_run=delta_run
                 )
                 
                 if output_file and os.path.exists(output_file):
@@ -226,6 +254,7 @@ def download_template():
     else:
         flash("❌ Template file not found.", "error")
         return redirect(url_for('index'))
+@app.route('/convert_ncqa', methods=['POST'])
 def convert_ncqa():
     """Convert uploaded NCQA PDF to YAML"""
     if 'ncqa_pdf' not in request.files:

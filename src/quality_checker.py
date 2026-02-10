@@ -38,7 +38,8 @@ class DataQualityChecker:
         print("  Checking for duplicate member IDs...")
         
         for table_name, rows in self.data_store.items():
-            if not rows or 'MEM_NBR' not in rows[0]:
+            # Duplicate check only makes sense for the master Member table
+            if not rows or 'MEM_NBR' not in rows[0] or 'MEMBER_IN' not in table_name:
                 continue
             
             df = pd.DataFrame(rows)
@@ -83,18 +84,21 @@ class DataQualityChecker:
                     self.stats['invalid_dates'] += len(invalid)
             
             # Check service dates
-            if 'SVC_START' in df.columns and 'SVC_END' in df.columns:
-                df['SVC_START'] = pd.to_datetime(df['SVC_START'], errors='coerce')
-                df['SVC_END'] = pd.to_datetime(df['SVC_END'], errors='coerce')
+            svc_start_col = next((c for c in df.columns if c in ['SERV_DT', 'SVC_START', 'LAB_SCR_DT']), None)
+            svc_end_col = next((c for c in df.columns if c in ['DISCH_DT', 'SVC_END']), None)
+            
+            if svc_start_col and svc_end_col:
+                df[svc_start_col] = pd.to_datetime(df[svc_start_col], errors='coerce')
+                df[svc_end_col] = pd.to_datetime(df[svc_end_col], errors='coerce')
                 
-                invalid = df[df['SVC_START'] > df['SVC_END']]
+                invalid = df[df[svc_start_col] > df[svc_end_col]].dropna(subset=[svc_start_col, svc_end_col])
                 
                 if not invalid.empty:
                     self.issues.append({
                         'severity': 'ERROR',
                         'table': table_name,
                         'check': 'Date Logic',
-                        'message': f"{len(invalid)} records have SVC_START > SVC_END",
+                        'message': f"{len(invalid)} records have {svc_start_col} > {svc_end_col}",
                         'details': invalid['MEM_NBR'].tolist()[:5] if 'MEM_NBR' in invalid.columns else []
                     })
                     self.stats['invalid_dates'] += len(invalid)
@@ -104,10 +108,10 @@ class DataQualityChecker:
         print("  Checking required fields...")
         
         required_fields = {
-            'MEMBER_IN': ['MEM_NBR', 'DOB', 'GENDER'],
+            'MEMBER_IN': ['MEM_NBR', 'MEM_DOB', 'MEM_GENDER'],
             'ENROLLMENT_IN': ['MEM_NBR', 'ENR_START', 'ENR_END'],
-            'VISIT_IN': ['MEM_NBR', 'SVC_START'],
-            'LAB_IN': ['MEM_NBR', 'SVC_START']
+            'VISIT_IN': ['MEM_NBR', 'SERV_DT'],
+            'LAB_IN': ['MEM_NBR', 'LAB_SCR_DT']
         }
         
         for table_name, rows in self.data_store.items():

@@ -1,0 +1,45 @@
+measure_name: SMD
+description: SMD HEDIS Measure (Auto-generated from PDF)
+rules:
+  age_range:
+  - 18
+  - 64
+  age_as_of: December 31
+  anchor_date_type: calendar_end
+  continuous_enrollment:
+    period_months: 12
+    allowable_gap_days: 45
+    no_gap_on_last_day: true
+  initial_population:
+  - event: Outpatient Visit
+    value_set_names:
+    - Outpatient
+    table: SMD_VISIT_IN
+  exclusions: []
+  clinical_events:
+    numerator_components:
+    - name: HbA1c Test
+      table: lab/visit/rx/emr
+      value_set_names:
+      - HbA1c Test
+    - name: LDL-C Test
+      table: lab/visit/rx/diabetes
+      value_set_names:
+      - LDL-C Test
+    denominator_components:
+    - name: Schizophrenia_Inpatient
+      count: 1
+      table: visit
+      value_set_names:
+      - Schizophrenia
+      - Inpatient
+      diagnosis_pattern: Schizophrenia
+      overrides:
+        POS: '21'
+    - name: Schizophrenia_Outpatient_History
+      count: 2
+      min_separation_days: 1
+      table: visit
+      diagnosis_pattern: Schizophrenia
+      overrides:
+        POS: '11'

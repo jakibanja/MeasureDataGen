@@ -16,7 +16,7 @@ load_dotenv()
 _vsd_cache = {}
 _ai_extractor_cache = None
 
-def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_check=False, disable_ai=None, validate_ncqa=False, model_name="qwen2:0.5b"):
+def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_check=False, disable_ai=None, validate_ncqa=False, model_name="qwen2:0.5b", mocking_depth='population', column_scope='all', baseline_path=None, delta_run=False):
     """
     Core function for running measure generation with explicit paths.
     Returns the path to the generated output file.
@@ -28,6 +28,8 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
         skip_quality_check: If True, skips quality checks for faster generation
         disable_ai: If True, skips AI Extractor (faster). If None, checks DISABLE_AI_EXTRACTOR env var
         model_name: Name of the Ollama model to use
+        mocking_depth: 'population' (default) or 'scenario'
+        column_scope: 'all' (default) or 'mandatory'
     """
     start_time = time.time()
     measure_name = measure_name.upper()
@@ -98,14 +100,26 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
     else:
         print("📋 Detected legacy format - using TestCaseParser")
         parser = TestCaseParser(testcase_path, extractor=extractor)
+
+    # ⚡ Handle Baseline Parser (for Delta Run)
+    baseline_parser = None
+    if delta_run and baseline_path:
+        if not os.path.exists(baseline_path):
+            print(f"⚠️ Baseline file not found: {baseline_path}")
+        else:
+            print("📋 Initializing Baseline Parser...")
+            if _is_standard_format(baseline_path):
+                baseline_parser = StandardFormatParser(baseline_path)
+            else:
+                baseline_parser = TestCaseParser(baseline_path, extractor=extractor)
     
-    engine = MockupEngine(config_path, schema_path, vsd_manager=vsd_manager, measure_name_override=measure_name)
+    engine = MockupEngine(config_path, schema_path, vsd_manager=vsd_manager, measure_name_override=measure_name, mocking_depth=mocking_depth, column_scope=column_scope)
     
     # Load config for parser
     with open(config_path) as f:
         measure_config = yaml.safe_load(f)
 
-    result = _process_measure(measure_config, measure_name, parser, engine, skip_quality_check=skip_quality_check, validate_ncqa=validate_ncqa)
+    result = _process_measure(measure_config, measure_name, parser, engine, skip_quality_check=skip_quality_check, validate_ncqa=validate_ncqa, baseline_parser=baseline_parser)
     
     total_time = time.time() - start_time
     print(f"\n⏱️  Total generation time: {total_time:.2f} seconds")
@@ -135,13 +149,50 @@ def run_measure_gen(measure_name):
     vsd_path = os.getenv('VSD_PATH', 'data/VSD_MY2026.xlsx')
     return run_measure_gen_custom(measure_name, testcase_path, vsd_path)
 
-def _process_measure(measure_config, measure_name, parser, engine, output_path=None, audit_logger=None, skip_quality_check=False, validate_ncqa=False):
+def _process_measure(measure_config, measure_name, parser, engine, output_path=None, audit_logger=None, skip_quality_check=False, validate_ncqa=False, baseline_parser=None):
     print(f"\n--- Processing {measure_name} ---")
     
     # 1. Parse Scenarios
     print("Reading scenarios from {}...".format(parser.file_path))
     scenarios = parser.parse_scenarios(measure_config)
     print(f"Found {len(scenarios)} scenarios.")
+    
+    # --- Delta Logic ---
+    if baseline_parser:
+        print(f"Reading BASELINE scenarios from {baseline_parser.file_path}...")
+        bl_scenarios = baseline_parser.parse_scenarios(measure_config)
+        print(f"Found {len(bl_scenarios)} baseline scenarios.")
+        
+        # Build Baseline Hash Map
+        # Key: Scenario ID (robust)
+        # Value: Hash of (Header + Expected) to catch content changes
+        bl_map = {}
+        for sc in bl_scenarios:
+            # ⚡ Robust Hash: Check Header (Legacy) + Scenario (Standard) + Expected
+            content_hash = hash(str(sc.get('header', '')) + str(sc.get('scenario', '')) + str(sc.get('expected', '')))
+            bl_map[sc['id']] = content_hash
+            
+        # Filter Target Scenarios
+        filtered_scenarios = []
+        for sc in scenarios:
+             target_hash = hash(str(sc.get('header', '')) + str(sc.get('scenario', '')) + str(sc.get('expected', '')))
+             sid = sc['id']
+             
+             if sid not in bl_map:
+                 filtered_scenarios.append(sc) # New Scenario
+                 print(f"  [NEW] {sid}")
+             elif bl_map[sid] != target_hash:
+                 filtered_scenarios.append(sc) # Changed Scenario
+                 print(f"  [MODIFIED] {sid}")
+             else:
+                 pass # Unchanged - Skip
+        
+        print(f"📉 Delta Run: Filtered {len(scenarios)} -> {len(filtered_scenarios)} scenarios.")
+        scenarios = filtered_scenarios
+        
+        if not scenarios:
+            print("⚠️ No changes detected! Nothing to generate.")
+            return None
     
     # 2. Containers for data
     data_store = {}
@@ -178,45 +229,71 @@ def _process_measure(measure_config, measure_name, parser, engine, output_path=N
         ))
         
         # Visits
-        v_table, v_rows = engine.generate_visits(mem_id, spans=sc.get('visit_spans'))
+        v_table, v_rows = engine.generate_visits(mem_id, spans=sc.get('visit_spans'), overrides=overrides, product_line=sc.get('product_line', 'Commercial'))
         data_store[v_table].extend(v_rows)
 
         # 4. Compliance Events
-        processed_components = set()
+        # ⚡ Unified Event Loop (Supports Multiple Events per Scenario)
         
-        # ⚡ Shared Event Date Logic (Respect ED: override)
-        ed_override = sc.get('event_date_override')
-        ed_by_index = overrides.get('events_by_index', {})
+        # Helper: Ensure overrides are lists
+        if 'events' in overrides:
+             for k, v in overrides['events'].items():
+                 if isinstance(v, dict):
+                     overrides['events'][k] = [v]
         
-        for i, comp in enumerate(engine.measure['rules']['clinical_events']['numerator_components']):
-            if comp['name'] in sc['compliant']:
-                # ⚡ Precedence: 1. Named Override 2. Index Override (ED1, ED2) 3. Global ED: 4. Generated
-                comp_override = overrides.get('events', {}).get(comp['name'], {})
-                
-                target_dt = comp_override.get('date')
-                if not target_dt: target_dt = ed_by_index.get(i+1)
-                if not target_dt: target_dt = ed_override
-                
-                if target_dt:
-                    if 'events' not in overrides: overrides['events'] = {}
-                    overrides['events'][comp['name']] = {'date': target_dt}
+        # Helper: Map component names to config index (for Legacy ED1/ED2 support)
+        comp_map = {c['name']: i for i, c in enumerate(engine.measure['rules']['clinical_events']['numerator_components'])}
+        
+        # Track generated counts per type to match metadata
+        gen_counts = {} 
+        
+        # Iterate through ALL compliant events (including duplicates if specified)
+        for event_name in sc['compliant']:
+            # Get Component Config Index
+            comp_idx = comp_map.get(event_name, -1)
+            
+            # Metadata Retrieval
+            specific_meta = {}
+            if 'events' in overrides and event_name in overrides['events']:
+                 meta_list = overrides['events'][event_name]
+                 current_count = gen_counts.get(event_name, 0)
+                 if current_count < len(meta_list):
+                     specific_meta = meta_list[current_count]
+            
+            # Legacy ED1/ED2 Support (Apply to first instance only)
+            if 'date' not in specific_meta and comp_idx != -1 and gen_counts.get(event_name, 0) == 0:
+                 legacy_date = overrides.get('events_by_index', {}).get(comp_idx + 1)
+                 if legacy_date:
+                     specific_meta['date'] = legacy_date
+            
+            # Global ED override (if still no date)
+            if 'date' not in specific_meta and sc.get("event_date_override"):
+                 specific_meta['date'] = sc.get("event_date_override")
 
-                table_name, row = engine.generate_clinical_event(
-                    mem_id, comp['name'], is_compliant=True, offset_days=i*30, 
-                    overrides=overrides
-                )
+            # Generate (injecting specific_metadata for the new engine logic)
+            # We copy overrides to avoid polluting global state, but it's shallow copy of dict
+            call_overrides = overrides.copy()
+            call_overrides['specific_metadata'] = specific_meta
+            
+            result = engine.generate_clinical_event(
+                mem_id, event_name, is_compliant=True, 
+                offset_days=len(data_store.get('visit', []))*5, # Stagger slightly
+                overrides=call_overrides,
+                product_line=sc.get('product_line', 'Commercial')
+            )
+            
+            # Smart Handler: Support both Single (Table, Row) and List [(Table, Row), ...]
+            events_to_process = []
+            if isinstance(result, list):
+                events_to_process = result
+            else:
+                events_to_process = [result]
+                
+            for table_name, row in events_to_process:
                 if table_name and table_name in data_store:
                     data_store[table_name].append(row)
-                processed_components.add(comp['name'])
-        
-        for i, event_name in enumerate(sc['compliant']):
-            if event_name not in processed_components:
-                table_name, row = engine.generate_clinical_event(
-                    mem_id, event_name, is_compliant=True, offset_days=(len(processed_components)+i)*30, 
-                    overrides=overrides
-                )
-                if table_name and table_name in data_store:
-                    data_store[table_name].append(row)
+            
+            gen_counts[event_name] = gen_counts.get(event_name, 0) + 1
 
         # 5. Exclusion Events
         for excl_name in sc['excluded']:
@@ -316,6 +393,8 @@ if __name__ == "__main__":
     parser.add_argument('--model', default='qwen2:0.5b', help='Ollama model name')
     parser.add_argument('--skip-quality-check', action='store_true', help='Skip quality checks')
     parser.add_argument('--validate-ncqa', action='store_true', help='Validate NCQA compliance')
+    parser.add_argument('--depth', choices=['population', 'scenario'], default='population', help='Mocking depth: full population data or only explicit scenario events')
+    parser.add_argument('--scope', choices=['all', 'mandatory'], default='all', help='Column scope: all fields (including rich metadata) or only mandatory/compliance fields')
     
     args = parser.parse_args()
     measures = [m.strip() for m in args.measures.split(',')]
@@ -351,5 +430,7 @@ if __name__ == "__main__":
             disable_ai=args.no_ai, 
             model_name=args.model,
             skip_quality_check=args.skip_quality_check,
-            validate_ncqa=args.validate_ncqa
+            validate_ncqa=args.validate_ncqa,
+            mocking_depth=args.depth,
+            column_scope=args.scope
         )
