@@ -46,8 +46,13 @@ tables:
     fk: "MEM_NBR"
     fields:
       date: "SERV_DT"
+      discharge_date: "DISCH_DT"
       pos: "POS"
+      revenue_code: "REV"
+      bill_type: "BILL_TYPE"
+      claim_type: "CLAIM_TY"
       provider_npi: "BILLING_PROV_NPI"
+      provider_specialty: "PROV_SPEC"
       # Grouped Code Fields for easier engine searching
       procedure_codes: ["CPT_1", "CPT_2", "HCPCS_1", "HCPCS_2"]
       diagnosis_codes: ["DIAG_I_1", "DIAG_I_2", "DIAG_I_3", "DIAG_I_4", "DIAG_I_5"] # Can expand if needed
@@ -76,7 +81,7 @@ tables:
       hospice_flag: "HOSPICE"
 
   # Pharmacy Claims
-  pharmacy:
+  rx:
     name: "{MEASURE}_RX_IN"
     fk: "MEM_NBR"
     fields:
@@ -84,6 +89,13 @@ tables:
       ndc: "RX_NDC"
       days_supply: "RX_DAYS_SUPP"
       quantity: "QTY_DISP"
+      claim_id: "RX_CLAIM_ID"
+      claim_den: "CLAIM_DEN"
+      claim_type: "CLAIM_TY"
+      prov_nbr: "PROV_NBR"
+      prov_npi: "PROV_NPI"
+      pharm_npi: "PHARM_NPI"
+      product_id: "PRODUCT_ID"
 
   # Laboratory Results
   lab:
@@ -95,20 +107,4 @@ tables:
       cpt: "LAB_CPT"
       value: "LAB_VALUE"
 
-# ⚡ Benefit Group Logic
-benefit_profiles:
-  BEN_MEDICAL:
-    - BEN_MEDICAL
-    - BEN_MH_INP
-    - BEN_MH_INT
-    - BEN_MH_AMB
-    - BEN_CD_INP
-    - BEN_CD_INT
-    - BEN_CD_AMB
-    - BEN_CD_AMP
-
-  BEN_RX:
-    - BEN_RX
-
-  BEN_DENT:
-    - BEN_DENT
+# Benefit profiles moved to config/benefits.yaml

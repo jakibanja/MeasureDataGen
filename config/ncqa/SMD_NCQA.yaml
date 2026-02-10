@@ -1,0 +1,34 @@
+measure_name: SMD
+description: SMD HEDIS Measure (Auto-generated from PDF)
+rules:
+  age_range:
+  - 18
+  - 64
+  age_as_of: December 31
+  anchor_date_type: calendar_end
+  continuous_enrollment:
+    period_months: 12
+    allowable_gap_days: 45
+    no_gap_on_last_day: true
+  initial_population:
+  - event: Outpatient Visit
+    value_set_names:
+    - Outpatient
+    table: SMD_VISIT_IN
+  exclusions:
+  - name: Hospice
+    value_set_names:
+    - Hospice Encounter
+    - Hospice Intervention
+  - name: Death
+    criteria: Death during measurement period
+  clinical_events:
+    numerator_components:
+    - name: HbA1c Test
+      table: lab
+      value_set_names:
+      - HbA1c Tests
+    - name: LDL-C Test
+      table: lab
+      value_set_names:
+      - LDL-C Tests

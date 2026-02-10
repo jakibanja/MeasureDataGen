@@ -8,14 +8,22 @@ class TestCaseParser:
         self.file_path = file_path
         self.extractor = extractor
         self.benefit_profiles = {}
+        # Load Benefit Profiles
         try:
-             config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'schema_map.yaml')
-             if os.path.exists(config_path):
-                 with open(config_path, 'r') as f:
-                     cfg = yaml.safe_load(f)
-                     self.benefit_profiles = cfg.get('benefit_profiles', {})
+            # Priority 1: Dedicated benefits.yaml
+            ben_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'benefits.yaml')
+            if os.path.exists(ben_path):
+                with open(ben_path, 'r') as f:
+                    self.benefit_profiles = yaml.safe_load(f)
+            else:
+                # Fallback: schema_map.yaml (Legacy)
+                config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'schema_map.yaml')
+                if os.path.exists(config_path):
+                    with open(config_path, 'r') as f:
+                        cfg = yaml.safe_load(f)
+                        self.benefit_profiles = cfg.get('benefit_profiles', {})
         except Exception as e:
-             print(f"Warning: Could not load benefit profiles: {e}")
+            print(f"Warning: Could not load benefit profiles: {e}")
         
     def parse_scenarios(self, measure_config):
         xl = pd.ExcelFile(self.file_path)
@@ -175,10 +183,15 @@ class TestCaseParser:
             parsed_sc["anchor_date"] = ad_match.group(1).strip()
 
         # 2.6 Event Date Override (ED:) - Support multiple formats
-        # a) Global: ED: 1/1/MY
-        ed_match = re.search(r'\bed\s*:\s*(' + date_part_full + r')(?!\s*=)', blob_full, re.IGNORECASE)
-        if ed_match:
-            parsed_sc["event_date_override"] = ed_match.group(1).strip()
+        # a) Global/Multi: ED: 1/1/MY, 2/1/MY
+        ed_list_match = re.search(r'\bed\s*:\s*((?:' + date_part_full + r'(?:\s*,\s*)?)+)', blob_full, re.IGNORECASE)
+        if ed_list_match:
+            date_blob = ed_list_match.group(1).strip()
+            # Split by comma or space if multiple dates
+            dates = [d.strip() for d in re.split(r'[,\s]+', date_blob) if d.strip()]
+            parsed_sc["event_dates"] = dates # Store as list
+            if dates:
+                parsed_sc["event_date_override"] = dates[0]
             
         # b) Numbered: ED1: 1/1/MY, ED2: 2/1/MY
         ed_numbers = re.findall(r'\bed(\d+)\s*:\s*(' + date_part_full + r')', blob_full, re.IGNORECASE)
@@ -191,9 +204,34 @@ class TestCaseParser:
             clean_name = name.strip().lower()
             if clean_name not in ['ad', 'ce', 'ne', 'ag', 'pl']: # Skip other prefixes
                 if 'events' not in parsed_sc["overrides"]: parsed_sc["overrides"]['events'] = {}
-                # Match to numerator or exclusion
                 matched_name = next((c['name'] for c in numerator_comps if clean_name in c['name'].lower()), name.strip())
                 parsed_sc["overrides"]['events'][matched_name] = {'date': dt.strip()}
+
+        # 2.7 ⚡ Professional Overrides: F1: Value, F2: Value, etc.
+        field_overrides = re.findall(r'\bf(\d+)\s*[:=]\s*([\w\d\-\s]+)', blob_full, re.IGNORECASE)
+        for num, val in field_overrides:
+            parsed_sc["overrides"][f"FIELD{num}"] = val.strip()
+
+        # 2.8 ⚡ Pinned Overrides: V1: DIAG=Z00.00, V2: CPT=99214
+        # Matches V<number>: <KEY>=<VALUE>
+        pinned_overrides = re.findall(r'\bv(\d+)\s*:\s*([\w\d]+)\s*[:=]\s*([\w\d\-\.]+)', blob_full, re.IGNORECASE)
+        for num, key, val in pinned_overrides:
+             idx = int(num)
+             if 'pinned_visits' not in parsed_sc["overrides"]: parsed_sc["overrides"]['pinned_visits'] = {}
+             if idx not in parsed_sc["overrides"]['pinned_visits']: parsed_sc["overrides"]['pinned_visits'][idx] = {}
+             
+             # Standardize keys
+             clean_key = key.strip().upper()
+             if clean_key in ['DIAG', 'DIAGNOSIS']: clean_key = 'DIAG_I_1'
+             elif clean_key in ['CPT', 'PROC']: clean_key = 'CPT_1'
+             elif clean_key in ['POS']: clean_key = 'POS'
+             
+             parsed_sc["overrides"]['pinned_visits'][idx][clean_key] = val.strip()
+
+        # Specific Diagnosis Override (DIAG: Z71.3)
+        diag_match = re.search(r'diag\s*[:=]\s*([\w\d.]+)', blob_full)
+        if diag_match:
+            parsed_sc["overrides"]["DIAG_I_1"] = diag_match.group(1).upper()
         
         # 3. Compliance & Exclusions (CE: and NE:)
         for comp in numerator_comps:
@@ -210,19 +248,35 @@ class TestCaseParser:
             
             # PSA-specific patterns
             if 'psa' in kw and 'test' in kw:
-                # Look for CE=1, CE:1, CE 1, Clinical Event=1, etc.
                 if re.search(r'\bce\s*[:=]\s*1\b', blob_full):
                     found = True
-                # Look for "PSA", "Lab", "Screening", "Clinical Event"
                 if any(pattern in blob_full for pattern in ['psa', 'lab test', 'screening', 'clinical event']):
-                    # But exclude if it says "no psa", "not tested", "ce=0", "ce:0"
                     if not any(neg in blob_full for neg in ['no psa', 'not tested', 'ce=0', 'ce:0', 'ce =0', 'ce:  0']):
                         found = True
             
-            # Add other measure-specific patterns here as needed
-            
-            if found and comp['name'] not in parsed_sc["compliant"]:
-                parsed_sc["compliant"].append(comp['name'])
+            if found:
+                if comp['name'] not in parsed_sc["compliant"]:
+                    parsed_sc["compliant"].append(comp['name'])
+                
+                # ⚡ Extract Pharmacy-specific metadata (Days Supply, Quantity, NDC)
+                if comp.get('table') == 'rx' or "Medication" in comp['name'] or "Drug" in comp['name']:
+                    if 'events' not in parsed_sc["overrides"]: parsed_sc["overrides"]['events'] = {}
+                    if comp['name'] not in parsed_sc["overrides"]['events']:
+                        parsed_sc["overrides"]['events'][comp['name']] = {}
+                    
+                    meta = parsed_sc["overrides"]['events'][comp['name']]
+                    
+                    # Days Supply: DS: 30, Days: 90
+                    ds_match = re.search(r'(?:ds|days?|days?\s*supply)\s*[:=]\s*(\d+)', blob_full)
+                    if ds_match: meta['days_supply'] = int(ds_match.group(1))
+                    
+                    # Quantity: QTY: 30
+                    qty_match = re.search(r'(?:qty|quantity)\s*[:=]\s*(\d+)', blob_full)
+                    if qty_match: meta['quantity'] = int(qty_match.group(1))
+                    
+                    # NDC: NDC: 12345678901
+                    ndc_match = re.search(r'ndc\s*[:=]\s*([\d-]+)', blob_full)
+                    if ndc_match: meta['code'] = ndc_match.group(1).strip()
         
         for excl in exclusion_comps:
             kw_excl = excl['name'].lower()

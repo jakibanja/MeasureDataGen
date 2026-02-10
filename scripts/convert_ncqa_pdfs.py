@@ -15,14 +15,19 @@ Usage:
 import argparse
 import os
 import sys
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.ncqa_parser import NCQASpecParser
 
-def convert_all_pdfs(pdf_dir='docs/ncqa_specs', output_dir='config/ncqa'):
+def convert_all_pdfs(pdf_dir=None, output_dir=None):
     """Convert all NCQA PDFs in directory to YAML configs."""
+    if pdf_dir is None: pdf_dir = os.getenv('NCQA_SPEC_DIR', 'docs/ncqa_specs')
+    if output_dir is None: output_dir = os.getenv('NCQA_CONFIG_DIR', 'config/ncqa')
     os.makedirs(output_dir, exist_ok=True)
     
     if not os.path.exists(pdf_dir):
@@ -60,8 +65,10 @@ def convert_all_pdfs(pdf_dir='docs/ncqa_specs', output_dir='config/ncqa'):
         except Exception as e:
             print(f"   ❌ Failed: {e}")
 
-def convert_single_measure(measure, pdf_dir='docs/ncqa_specs', output_dir='config/ncqa'):
+def convert_single_measure(measure, pdf_dir=None, output_dir=None):
     """Convert a single measure's PDF."""
+    if pdf_dir is None: pdf_dir = os.getenv('NCQA_SPEC_DIR', 'docs/ncqa_specs')
+    if output_dir is None: output_dir = os.getenv('NCQA_CONFIG_DIR', 'config/ncqa')
     os.makedirs(output_dir, exist_ok=True)
     
     # Try finding the file roughly matching the measure

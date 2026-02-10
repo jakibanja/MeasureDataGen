@@ -1,0 +1,32 @@
+# Benefit Profiles Configuration
+# Define groups of benefit columns that should be toggled together.
+# When a test case says "BE: Medical", it will enable all columns listed under MEDICAL.
+
+MEDICAL:
+  - BEN_MEDICAL
+  - BEN_MH_INP
+  - BEN_MH_INT
+  - BEN_MH_AMB
+  - BEN_CD_INP
+  - BEN_CD_INT
+  - BEN_CD_AMB
+  - BEN_CD_AMP
+
+RX:
+  - BEN_RX
+
+DENTAL:
+  - BEN_DENT
+
+# Example of a comprehensive profile
+FULL:
+  - BEN_MEDICAL
+  - BEN_RX
+  - BEN_DENT
+  - BEN_MH_INP
+  - BEN_MH_INT
+  - BEN_MH_AMB
+  - BEN_CD_INP
+  - BEN_CD_INT
+  - BEN_CD_AMB
+  - BEN_CD_AMP

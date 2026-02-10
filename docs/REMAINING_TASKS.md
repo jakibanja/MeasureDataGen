@@ -5,6 +5,7 @@
 ### Core Functionality
 - [x] **Hybrid Parser**: Regex + AI fallback (tinyllama)
 - [x] **PSA Measure**: Fully implemented and tested
+- [x] **SMD Measure**: 100% Mockup generation (Member, Enr, Visit, Lab, Monthly)
 - [x] **VSD Integration**: Dynamic code pulling from Value Set Directory
 - [x] **Schema System**: Flexible table/column mapping
 - [x] **Multi-table Output**: MEMBER_IN, ENROLLMENT_IN, VISIT_IN, LAB_IN, etc.
@@ -30,13 +31,14 @@
 
 ## 🚧 In Progress
 
-### WCC & IMA Measures
+### SMD Measure (Universal Level)
 - [x] Schema generated (via measure_automator)
-- [ ] Config files need manual review/editing
-- [ ] Test case files needed
-- [ ] Validation testing
+- [x] Full blueprint generated with Lab/RX/EMR tables
+- [/] Config refinement for Universal Logic (In Progress)
+- [x] Generation verification (757 records generated)
+- [ ] Compliance check against official NCQA rules
 
-**Status:** Schema ready, awaiting test data and config finalization.
+**Status:** High-fidelity mockup generation working. Refining for "At-One-Go" NCQA alignment.
 
 ---
 
@@ -80,7 +82,32 @@
 
 ## 📋 Priority 1 - Important Enhancements
 
-### 3. VSD Date Validation
+### 3. Universal SMD Logic
+**Goal:** Make SMD YAML handle every manual scenario automatically.
+
+**Tasks:**
+- [ ] Multi-Value Set mapping for PSA/BMI
+- [ ] Anchor Date (Dec 31) logic enforcement
+- [ ] Support Gender=O (Other) and Gender=X (Mixed) in parser
+- [ ] Align column names with official NCQA schemas
+
+**Estimated Effort:** 2-3 hours
+
+---
+
+### 4. NCQA Default Automation
+**Goal:** Run audit automatically with every generation.
+
+**Tasks:**
+- [ ] Add `AUTO_VALIDATE_NCQA=true` to `.env`
+- [ ] Modify `main.py` to trigger auditor if config exists
+- [ ] Show compliance score in terminal/UI
+
+**Estimated Effort:** 1-2 hours
+
+---
+
+### 5. VSD Date Validation
 **Goal:** Ensure codes are valid for the measurement year.
 
 **Tasks:**
@@ -287,6 +314,6 @@
 
 ---
 
-**Last Updated:** 2026-02-07  
-**Version:** 1.0  
-**Status:** Production-Ready (Core Features)
+**Last Updated:** 2026-02-09  
+**Version:** 2.1  
+**Status:** SMD Hybrid-Ready | Environment Refactored

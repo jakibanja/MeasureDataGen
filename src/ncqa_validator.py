@@ -4,12 +4,16 @@ NCQA Config Validator - Compares user config vs NCQA YAML
 
 import os
 import yaml
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class NCQAValidator:
     def __init__(self, measure_name):
         self.measure = measure_name
         # Path to official NCQA converted YAML
-        self.ncqa_config_path = f'config/ncqa/{measure_name}_NCQA.yaml'
+        ncqa_dir = os.getenv('NCQA_CONFIG_DIR', 'config/ncqa')
+        self.ncqa_config_path = os.path.join(ncqa_dir, f'{measure_name}_NCQA.yaml')
         
     def validate_config(self, user_config_path):
         """

@@ -333,7 +333,7 @@ Generates: config/PSA.yaml with age_range: [66, 100]
 - Log generation metadata
 - Export summary reports
 
----
+
 
 ## 🔧 Technical Specifications
 

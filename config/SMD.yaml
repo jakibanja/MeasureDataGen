@@ -1,0 +1,75 @@
+measure_name: SMD
+description: SMD HEDIS Measure (Synced with NCQA Standard)
+rules:
+  age_range:
+  - 18
+  - 64
+  age_as_of: December 31
+  anchor_date_type: calendar_end
+  continuous_enrollment:
+    period_months: 12
+    allowable_gap_days: 45
+    no_gap_on_last_day: true
+  initial_population: 
+    # Logic is now handled by composite events below
+    - event: "Outpatient Visit"
+      value_set_names: ["Outpatient"]
+      table: "visit"
+
+  clinical_events:
+    denominator_components:
+      # --- Step 1: Schizophrenia Cohort ---
+      - name: "Schizophrenia_Inpatient"
+        count: 1
+        table: visit
+        value_set_names: ["BH Stand Alone Acute Inpatient", "Schizophrenia"]
+        diagnosis_pattern: "Schizophrenia"
+        overrides:
+          POS: "21"
+          REV: "0100"
+          BILL_TYPE: "111"
+
+      - name: "Schizophrenia_Outpatient_History"
+        count: 2
+        min_separation_days: 14
+        table: visit
+        value_set_names: ["Outpatient", "Schizophrenia"]
+        diagnosis_pattern: "Schizophrenia"
+        overrides:
+          POS: "11"
+
+      # --- Step 2: Diabetes Cohort ---
+      - name: "Diabetes_Clinical_History"
+        count: 2
+        min_separation_days: 30
+        table: visit
+        value_set_names: ["Diabetes"]
+        diagnosis_pattern: "Diabetes"
+        overrides:
+          POS: "11"
+
+      - name: "Diabetes_Pharmacy_History"
+        type: composite
+        events: 
+          - table: visit
+            diagnosis_pattern: "Diabetes"
+            value_set_names: ["Diabetes"]
+          - table: rx
+            value_set_names: ["Diabetes Medications"]
+            drug_class: "Diabetes Medications"
+
+    numerator_components:
+    - name: HbA1c Test
+      value_set_names:
+      - HbA1c Tests
+      - Glucose Lab Test
+      table: lab
+    - name: LDL-C Test
+      value_set_names:
+      - LDL-C Tests
+      - Lipid Panel
+      table: lab
+    - name: Medication
+      value_set_names:
+      - Antipsychotic Medications
+      table: rx

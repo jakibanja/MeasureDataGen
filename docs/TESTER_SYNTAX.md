@@ -44,7 +44,36 @@ Instead of checking 10 individual columns, use the `BE:` shortcut.
 
 ---
 
-## 5. Monthly Flags (Run-Date Specific)
+## 6. Pinned Overrides (Visit-Specific)
+For scenarios requiring specific codes on specific visits, use the `V{N}:` syntax.
+
+| Syntax | Description | Example |
+| :--- | :--- | :--- |
+| `V{N}: KEY=VALUE` | **Pin Metadata to Visit #N** | `V1: DIAG=Z00.00` |
+
+### Supported Keys
+*   `DIAG` or `DIAGNOSIS` → Sets `DIAG_I_1`
+*   `CPT` or `PROC` → Sets `CPT_1`
+*   `POS` → Sets `POS` (Place of Service)
+*   `DATE` → Sets `SERV_DT`
+*   Any physical column name (e.g., `BILLING_PROV_NPI`)
+
+### Examples
+1.  **Split Diagnosis Scenario:**
+    > "Member has two visits. First is routine, second is for fracture."
+    > `V2: DIAG=S52.501A`
+    
+2.  **Specific Procedure Code:**
+    > "Visit 1 must use CPT 99203."
+    > `V1: CPT=99203`
+
+3.  **Complex Override:**
+    > "Visit 3 was telehealth."
+    > `V3: POS=02 V3: CPT=99441`
+
+---
+
+## 7. Monthly Flags (Run-Date Specific)
 If a flag (like Hospice) changes during the year, specify the `Rundate`.
 *   **Syntax:** `[Flag]=[Y/N] ... Rundate=[Date]`
 *   **Example:** `Hospice=Y with Rundate=12/31/MY-1`
