@@ -119,9 +119,10 @@ class BatchNCQAConverter:
             })
 
     def generate_report(self):
-        """Generate Markdown Report."""
-        report_path = "NCQA_EXTRACTION_REPORT.md"
-        with open(report_path, 'w') as f:
+        """Generate Markdown and HTML Reports."""
+        # 1. Markdown
+        md_path = "NCQA_EXTRACTION_REPORT.md"
+        with open(md_path, 'w') as f:
             f.write(f"# NCQA Batch Extraction Report\n")
             f.write(f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
             f.write(f"**Model:** {self.model_name}\n\n")
@@ -135,7 +136,108 @@ class BatchNCQAConverter:
                 else:
                     f.write(f"| ❌ | {entry['file']} | N/A | Error: {entry.get('error')} | N/A |\n")
         
-        print(f"\n📄 Report generated: {report_path}")
+        print(f"\n📄 Markdown Report: {md_path}")
+        
+        # 2. HTML (Professional Dashboard)
+        html_path = "NCQA_EXTRACTION_REPORT.html"
+        self.generate_html_report(html_path)
+        print(f"🎨 HTML Dashboard: {html_path}")
+
+    def generate_html_report(self, html_path):
+        """Generate a sleek HTML dashboard."""
+        
+        success_count = sum(1 for e in self.report_log if e.get('status') == 'SUCCESS')
+        total_count = len(self.report_log)
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>NCQA Extraction Report</title>
+            <style>
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f4f6f9; }}
+                h1 {{ color: #2c3e50; }}
+                .summary {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; gap: 40px; }}
+                .stat {{ text-align: center; }}
+                .stat-num {{ font-size: 24px; font-weight: bold; color: #3498db; }}
+                .stat-label {{ color: #7f8c8d; font-size: 14px; }}
+                table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+                th {{ background: #34495e; color: white; padding: 12px; text-align: left; }}
+                td {{ padding: 12px; border-bottom: 1px solid #ecf0f1; }}
+                tr:last-child td {{ border-bottom: none; }}
+                .status-success {{ color: #27ae60; font-weight: bold; }}
+                .status-failed {{ color: #c0392b; font-weight: bold; }}
+                .btn {{ display: inline-block; padding: 6px 12px; background: #3498db; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; }}
+                .btn:hover {{ background: #2980b9; }}
+            </style>
+        </head>
+        <body>
+            <h1>🏭 NCQA Automated Extraction Report</h1>
+            
+            <div class="summary">
+                <div class="stat">
+                    <div class="stat-num">{total_count}</div>
+                    <div class="stat-label">Total PDFs</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num">{success_count}</div>
+                    <div class="stat-label">Successful</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num">{datetime.now().strftime('%Y-%m-%d %H:%M')}</div>
+                    <div class="stat-label">Run Time</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num">{self.model_name}</div>
+                    <div class="stat-label">AI Model</div>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>PDF File</th>
+                        <th>Measure</th>
+                        <th>Details</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+        
+        for entry in self.report_log:
+            if entry.get('status') == 'SUCCESS':
+                row = f"""
+                <tr>
+                    <td class="status-success">SUCCESS</td>
+                    <td>{entry['file']}</td>
+                    <td><strong>{entry['measure']}</strong></td>
+                    <td>{entry['details']}</td>
+                    <td><a href="{entry['template']}" class="btn">Download Template</a></td>
+                </tr>
+                """
+            else:
+                row = f"""
+                <tr>
+                    <td class="status-failed">FAILED</td>
+                    <td>{entry['file']}</td>
+                    <td>N/A</td>
+                    <td>{entry.get('error')}</td>
+                    <td>-</td>
+                </tr>
+                """
+            html_content += row
+            
+        html_content += """
+                </tbody>
+            </table>
+        </body>
+        </html>
+        """
+        
+        with open(html_path, 'w') as f:
+            f.write(html_content)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run Batch NCQA Converter')

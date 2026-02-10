@@ -9,7 +9,7 @@ We have successfully implemented a **fully automated, robust pipeline** for conv
 -   **The "One Button" Solution**.
 -   Scans a folder of PDFs.
 -   automatically runs the entire pipeline for each file.
--   Generates a final `NCQA_EXTRACTION_REPORT.md`.
+-   Generates a final `NCQA_EXTRACTION_REPORT.md` and a **Professional HTML Dashboard** (`NCQA_EXTRACTION_REPORT.html`).
 
 ### 2. **Universal Schema Manager** (`src/schema_manager.py`)
 -   **Problem Solved**: "PSA" was hardcoded as the template.
