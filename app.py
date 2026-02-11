@@ -251,7 +251,31 @@ def index():
                 import traceback
                 print(traceback.format_exc())
 
-    return render_template('index.html')
+    # --- Phase 4 UI: System Health & Measure Discovery ---
+    health = {
+        'vsd': os.path.exists(VSD_PATH),
+        'ndc': os.path.exists('data/HEDIS_Medication_Codes.json'),
+        'product_config': os.path.exists('config/products.yaml')
+    }
+
+    # Discover measures from config/*.yaml
+    measures = []
+    config_dir = 'config'
+    if os.path.exists(config_dir):
+        for f in os.listdir(config_dir):
+            if f.endswith('.yaml') and f != 'products.yaml':
+                m_code = f.replace('.yaml', '')
+                # Optional: Load YAML to get a pretty name
+                try:
+                    import yaml
+                    with open(os.path.join(config_dir, f), 'r') as yf:
+                        cfg = yaml.safe_load(yf)
+                        m_name = cfg.get('description', m_code)
+                        measures.append({'code': m_code, 'name': f"{m_code} - {m_name}"})
+                except:
+                    measures.append({'code': m_code, 'name': m_code})
+
+    return render_template('index.html', health=health, measures=measures)
 
 
 @app.route('/download_template')

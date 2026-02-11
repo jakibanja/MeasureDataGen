@@ -50,8 +50,8 @@ rules:
       - name: Statin
         table: rx
         value_set_names:
-          - High Intensity Statin Medications
-          - Low and Moderate Intensity Statin Medications
+          - High and Moderate Intensity Statin Medications
+          - High, Moderate and Low Intensity Statin Medications
         count: 4
         min_separation_days: 90
         days_supply: 90

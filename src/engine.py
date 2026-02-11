@@ -1,6 +1,7 @@
 import yaml
 import re
 import os
+import json
 import pandas as pd
 from datetime import datetime, timedelta
 from faker import Faker
@@ -43,6 +44,14 @@ class MockupEngine:
             "Medicaid": 3,
             "Exchange": 4
         }
+        
+        # ⚡ Phase 3: Load External Medication Code Overrides (NDC/RxNorm)
+        self.medication_codes = {}
+        med_codes_path = os.path.join(os.getcwd(), 'data', 'HEDIS_Medication_Codes.json')
+        if os.path.exists(med_codes_path):
+            with open(med_codes_path, 'r') as f:
+                self.medication_codes = json.load(f)
+            print(f"  🎯 Loaded {len(self.medication_codes)} HEDIS Medication Value Sets for code overrides.")
 
     def calculate_birth_date(self, age):
         # Age as of Dec 31
@@ -51,34 +60,48 @@ class MockupEngine:
     def validate_demographics(self, age, gender):
         """
         Validates age/gender against config-defined stratification rules (e.g. SPCE).
-        Returns (is_valid, suggested_age, suggested_gender)
+        Smart Fallback logic: 
+        1. If explicit age/gender provided -> Priority (Fidelity)
+        2. If missing -> HEDIS rule enforcement (Safety Net)
         """
-        strat = self.measure['rules'].get('age_stratification', [])
-        if not strat:
-            # Fallback to standard age_range if no stratification
-            rng = self.measure['rules'].get('age_range', [18, 100])
-            if age < rng[0] or age > rng[1]:
-                return False, rng[0], gender
-            return True, age, gender
+        # --- FIDELITY FIRST: Respect explicit test scenario data ---
+        # If age is valid (>0) and gender is provided, return them as is.
+        # This allows for negative/exclusion testing (e.g. testing an 80yo for a 21-75 range).
+        explicit_age = age if (age and age > 0) else None
+        explicit_gender = gender if (gender and gender in ['M', 'F']) else None
+        
+        # If both are explicit, we are done
+        if explicit_age and explicit_gender:
+            return True, explicit_age, explicit_gender
 
-        # Find matching stratification rule by gender
-        rule = next((s for s in strat if s.get('gender', '').upper() == gender.upper()), None)
+        # --- SMART FALLBACK: If missing, look for HEDIS rules ---
+        strat = self.measure['rules'].get('age_stratification', [])
+        
+        # Find matching rule or default
+        rule = None
+        if explicit_gender:
+            rule = next((s for s in strat if s.get('gender', '').upper() == explicit_gender.upper()), None)
+        
         if not rule:
-            # If no gender-specific rule, use first one or default
-            rule = strat[0] if strat else {'age_range': [18, 100]}
+            rule = strat[0] if strat else {'age_range': self.measure['rules'].get('age_range', [18, 100])}
+            if not explicit_gender:
+                explicit_gender = rule.get('gender', 'M')
 
         rng = rule.get('age_range', [18, 100])
-        if age < rng[0] or age > rng[1]:
-             # Suggest midpoint of valid range
-             return False, (rng[0] + rng[1]) // 2, gender
         
-        return True, age, gender
+        # If age was missing, suggest midpoint
+        if not explicit_age:
+            explicit_age = (rng[0] + rng[1]) // 2
+            return False, explicit_age, explicit_gender
+        
+        # If age was provided but gender was missing, we still return the explicit age
+        return True, explicit_age, explicit_gender
 
     def generate_member_base(self, mem_id, age, gender='F', overrides=None):
-        # ⚡ Robustness: Validate against stratification rules
+        # ⚡ Smart Fallback: Prioritize fidelity, auto-heal missing data
         is_valid, age, gender = self.validate_demographics(age, gender)
         if not is_valid:
-            print(f"  ⚠️  Adjusting age to {age} for member {mem_id} to meet stratification rules.")
+            print(f"  ✨ [Smart Fallback] Auto-populated missing demographics for {mem_id}: Age {age}, Gender {gender}")
 
         dob = self.calculate_birth_date(age)
         
@@ -410,7 +433,7 @@ class MockupEngine:
 
                  t_name, row = self.generate_clinical_event(
                     mem_id, 
-                    component_name=f"Composite_{i}", # Dummy
+                    component_name=component_config.get('name', 'Composite'), # Use real name if composite
                     is_compliant=True, 
                     offset_days=offset, 
                     overrides=sub_overrides, 
@@ -418,6 +441,28 @@ class MockupEngine:
                  )
                  events.append((t_name, row))
         return events
+
+    def _get_code_override(self, value_set_name, table_key):
+        """
+        Phase 3: External Code Reference Integration.
+        Checks for high-fidelity medication codes preprocessed from HEDIS Excel.
+        """
+        if value_set_name in self.medication_codes:
+            import random
+            codes_config = self.medication_codes[value_set_name]
+            
+            # Decide which code system to use based on target table
+            # RX table -> NDC
+            # Visit/Lab table -> RxNorm (Clinical metadata)
+            if 'rx' in table_key.lower():
+                codes = codes_config.get('NDC', [])
+            else:
+                codes = codes_config.get('RxNorm', [])
+            
+            if codes:
+                return random.choice(codes)
+        
+        return None
 
     def generate_clinical_event(self, mem_id, component_name, is_compliant=True, offset_days=0, overrides=None, product_line='COMMERCIAL'):
         # Locate component in measure config
@@ -497,7 +542,11 @@ class MockupEngine:
 
         # Priority 3: Component level defaults from YAML
         if component:
-            specific_days = component.get('days_supply', 30)
+            # ⚡ Smart Adherence: detect maintenance meds
+            is_maintenance = any(kw in component_name.lower() or kw in str(vs_name).lower() for kw in ['statin', 'maintenance', 'adherence'])
+            default_days = 90 if is_maintenance else 30
+            
+            specific_days = component.get('days_supply', default_days)
             specific_qty = component.get('quantity', specific_days)
 
         if meta:
@@ -539,7 +588,15 @@ class MockupEngine:
             vsd_code = None
             if self.vsd_manager and component.get('value_set_names'):
                 vs_name = component['value_set_names'][0]
-                vsd_code = self.vsd_manager.get_random_code(vs_name)
+                
+                # ⚡ Phase 3: Check for External Master List (NDC/CPT) override
+                override_code = self._get_code_override(vs_name, table_key)
+                if override_code:
+                    vsd_code = override_code
+                    print(f"   🎯 Using external master code override for {vs_name}: {vsd_code}")
+                else:
+                    vsd_code = self.vsd_manager.get_random_code(vs_name)
+                
                 row['_VALUE_SET_NAME'] = vs_name
             
             # ⚡ Priority: 1. Manual override from Excel 2. VSD code 3. Placeholder
@@ -551,7 +608,12 @@ class MockupEngine:
                 if table_key == 'lab':
                     row[target_table['fields']['cpt']] = final_code
                 elif table_key == 'visit':
-                    row["CPT_1"] = final_code
+                    # ⚡ Smart Code Routing: Diagnosis (ICD) vs Procedure (CPT/RxNorm)
+                    code_system = self.vsd_manager.get_code_system(final_code) if self.vsd_manager else "Unknown"
+                    if "ICD" in code_system.upper() or "DIAGNOSIS" in code_system.upper():
+                        row["DIAG_I_1"] = final_code
+                    else:
+                        row["CPT_1"] = final_code
                 elif table_key == 'rx':
                     row[target_table['fields']['ndc']] = final_code
                     row[target_table['fields']['days_supply']] = specific_days
@@ -618,7 +680,8 @@ class MockupEngine:
         # Product Context
         if 'product_id' in fields: 
             prod_info = self.product_config.get(product_line.upper(), {})
-            row[fields['product_id']] = prod_info.get('id', product_line.upper())
+            # Ensure it is the numeric ID e.g. "150"
+            row[fields['product_id']] = prod_info.get('id', self.pl_map.get(product_line, product_line))
 
     def _populate_visit_fields(self, row, target_table, mem_id, product_line='COMMERCIAL'):
         """Populates rich metadata for medical visits (Claims, POS, NPIs)."""

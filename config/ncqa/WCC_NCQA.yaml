@@ -1,0 +1,31 @@
+measure_name: WCC
+description: WCC HEDIS Measure (Auto-generated from PDF)
+rules:
+  age_range:
+  - 3
+  - 17
+  age_as_of: December 31
+  anchor_date_type: calendar_end
+  continuous_enrollment:
+    period_months: 12
+    allowable_gap_days: 45
+    no_gap_on_last_day: true
+  initial_population:
+  - event: Outpatient Visit
+    value_set_names:
+    - Outpatient
+    table: WCC_VISIT_IN
+  exclusions:
+  - name: Hospice
+    value_set_names:
+    - Hospice Encounter
+    - Hospice Intervention
+  - name: Death
+    criteria: Death during measurement period
+  clinical_events:
+    numerator_components:
+    - name: WCC Screening
+      table: visit
+      value_set_names:
+      - WCC Value Set
+    logic_pathways: []

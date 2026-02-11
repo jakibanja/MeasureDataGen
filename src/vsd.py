@@ -217,16 +217,16 @@ class VSDManager:
 
     def get_random_code(self, value_set_name, validate_dates=True):
         """
-        Returns a single code (first one found) for a value set.
+        Returns a single random code for a value set.
         """
+        import random
         codes = self.get_codes(value_set_name, validate_dates=validate_dates)
         if not codes:
             # Try without date validation as fallback
             if validate_dates:
-                # print(f"⚠️ No valid codes for '{value_set_name}' in MY {self.measurement_year}, using any available code")
                 codes = self.get_codes(value_set_name, validate_dates=False)
         
-        return str(codes[0]) if codes else None
+        return str(random.choice(codes)) if codes else None
     
     def find_value_sets(self, pattern, filter_empty=True):
         """
