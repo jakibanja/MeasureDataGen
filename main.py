@@ -37,6 +37,11 @@ def run_measure_gen_custom(measure_name, testcase_path, vsd_path, skip_quality_c
     schema_path = os.getenv('SCHEMA_MAP_PATH', 'config/schema_map.yaml')
     config_path = os.path.join(config_dir, f'{measure_name}.yaml')
     
+    # ⚡ Automated Schema Expansion: Ensure physical tables exist for this measure
+    from src.schema_manager import SchemaManager
+    sm = SchemaManager()
+    sm.expand_schema(measure_name)
+    
     # ⚡ Universal Fallback: If no specific config exists, use the Universal template
     if not os.path.exists(config_path):
         print(f"⚠️  No config found for {measure_name}, using Universal template...")
@@ -247,8 +252,20 @@ def _process_measure(measure_config, measure_name, parser, engine, output_path=N
         # Track generated counts per type to match metadata
         gen_counts = {} 
         
-        # Iterate through ALL compliant events (including duplicates if specified)
-        for event_name in sc['compliant']:
+        # ⚡ AUTO-INJECT DENOMINATOR COMPONENTS (For Multi-Step Measures)
+        # For complex measures like SMD, SPC, SPD: automatically generate identification events
+        # even if not explicitly in test case scenarios
+        auto_events = []
+        if 'denominator_components' in engine.measure['rules']['clinical_events']:
+            for denom_comp in engine.measure['rules']['clinical_events']['denominator_components']:
+                comp_name = denom_comp['name']
+                # Only auto-add if not already in compliant list
+                if comp_name not in sc['compliant']:
+                    auto_events.append(comp_name)
+        
+        # Iterate through ALL compliant events + Auto-Injected Denominator Components
+        all_events = auto_events + sc['compliant']  # Denominator first, then numerator
+        for event_name in all_events:
             # Get Component Config Index
             comp_idx = comp_map.get(event_name, -1)
             

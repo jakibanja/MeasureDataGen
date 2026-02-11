@@ -1,9 +1,9 @@
-measure_name: PSA
-description: PSA HEDIS Measure (Auto-generated from PDF)
+measure_name: LDL
+description: LDL HEDIS Measure (Auto-generated from PDF)
 rules:
   age_range:
   - 18
-  - 75
+  - 64
   age_as_of: December 31
   anchor_date_type: calendar_end
   continuous_enrollment:
@@ -14,7 +14,7 @@ rules:
   - event: Outpatient Visit
     value_set_names:
     - Outpatient
-    table: PSA_VISIT_IN
+    table: LDL_VISIT_IN
   exclusions:
   - name: Hospice
     value_set_names:
@@ -24,9 +24,12 @@ rules:
     criteria: Death during measurement period
   clinical_events:
     numerator_components:
-    - name: PSA Test
+    - name: HbA1c Test
       table: lab
       value_set_names:
-      - PSA Value Set
-      value_range: [0.5, 4.0]
+      - HbA1c Tests
+    - name: LDL-C Test
+      table: lab
+      value_set_names:
+      - LDL-C Tests
     logic_pathways: []

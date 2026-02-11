@@ -1,0 +1,270 @@
+[
+  {
+    "abbr": "WCC",
+    "title": "Weight Assessment and Counseling for Nutrition and Physical Activity for Children/ \nAdolescents (WCC)"
+  },
+  {
+    "abbr": "CHL",
+    "title": "Chlamydia Screening (CHL)"
+  },
+  {
+    "abbr": "COA",
+    "title": "Care for Older Adults (COA)"
+  },
+  {
+    "abbr": "OED",
+    "title": "Oral Evaluation, Dental Services (OED)"
+  },
+  {
+    "abbr": "TFC",
+    "title": "Topical Fluoride for Children (TFC)"
+  },
+  {
+    "abbr": "CWP",
+    "title": "Appropriate Testing for Pharyngitis (CWP)"
+  },
+  {
+    "abbr": "PCE",
+    "title": "Pharmacotherapy Management of COPD Exacerbation (PCE)"
+  },
+  {
+    "abbr": "CBP",
+    "title": "Controlling High Blood Pressure (CBP)"
+  },
+  {
+    "abbr": "PBH",
+    "title": "Blocker Treatment After a Heart Attack (PBH)"
+  },
+  {
+    "abbr": "CRE",
+    "title": "Cardiac Rehabilitation (CRE)"
+  },
+  {
+    "abbr": "GSD",
+    "title": "Glycemic Status Assessment for Patients With Diabetes (GSD)"
+  },
+  {
+    "abbr": "BPD",
+    "title": "Blood Pressure Control for Patients With Diabetes (BPD)"
+  },
+  {
+    "abbr": "EED",
+    "title": "Eye Exam for Patients With Diabetes (EED)"
+  },
+  {
+    "abbr": "KED",
+    "title": "Kidney Health Evaluation for Patients With Diabetes (KED)"
+  },
+  {
+    "abbr": "OMW",
+    "title": "Osteoporosis Management in Women Who Had a Fracture (OMW)"
+  },
+  {
+    "abbr": "OSW",
+    "title": "Osteoporosis Screening in Older Women (OSW)"
+  },
+  {
+    "abbr": "DMH",
+    "title": "Diagnosed Mental Health Disorders (DMH)"
+  },
+  {
+    "abbr": "FUH",
+    "title": "Up After Hospitalization for Mental Illness (FUH)"
+  },
+  {
+    "abbr": "FUM",
+    "title": "Up After Emergency Department Visit for Mental Illness (FUM)"
+  },
+  {
+    "abbr": "DSU",
+    "title": "Diagnosed Substance Use Disorders (DSU)"
+  },
+  {
+    "abbr": "FUI",
+    "title": "Intensity Care for Substance Use Disorder (FUI)"
+  },
+  {
+    "abbr": "FUA",
+    "title": "Up After Emergency Department Visit for Substance Use (FUA)"
+  },
+  {
+    "abbr": "POD",
+    "title": "Pharmacotherapy for Opioid Use Disorder (POD)"
+  },
+  {
+    "abbr": "SSD",
+    "title": "Diabetes Screening for People With Schizophrenia or Bipolar Disorder Who Are Using \nAntipsychotic Medications (SSD)"
+  },
+  {
+    "abbr": "SMD",
+    "title": "Diabetes Monitoring for People With Diabetes and Schizophrenia (SMD)"
+  },
+  {
+    "abbr": "SMC",
+    "title": "Cardiovascular Monitoring for People With Cardiovascular Disease and Schizophrenia (SMC)"
+  },
+  {
+    "abbr": "SAA",
+    "title": "Adherence to Antipsychotic Medications for Individuals With Schizophrenia (SAA)"
+  },
+  {
+    "abbr": "ACP",
+    "title": "Advance Care Planning (ACP)"
+  },
+  {
+    "abbr": "TRC",
+    "title": "Transitions of Care (TRC)"
+  },
+  {
+    "abbr": "FMC",
+    "title": "Risk Chronic \nConditions (FMC)"
+  },
+  {
+    "abbr": "PSA",
+    "title": "Based Screening in Older Men (PSA)"
+  },
+  {
+    "abbr": "URI",
+    "title": "Appropriate Treatment for Upper Respiratory Infection (URI)"
+  },
+  {
+    "abbr": "AAB",
+    "title": "Avoidance of Antibiotic Treatment for Acute Bronchitis/Bronchiolitis (AAB)"
+  },
+  {
+    "abbr": "LBP",
+    "title": "Use of Imaging Studies for Low Back Pain (LBP)"
+  },
+  {
+    "abbr": "DDE",
+    "title": "Disease Interactions in Older Adults (DDE)"
+  },
+  {
+    "abbr": "DAE",
+    "title": "Risk Medications in Older Adults (DAE)"
+  },
+  {
+    "abbr": "DBO",
+    "title": "Deprescribing of Benzodiazepines in Older Adults (DBO)"
+  },
+  {
+    "abbr": "HDO",
+    "title": "Use of Opioids at High Dosage (HDO)"
+  },
+  {
+    "abbr": "UOP",
+    "title": "Use of Opioids From Multiple Providers (UOP)"
+  },
+  {
+    "abbr": "COU",
+    "title": "Risk of Continued Opioid Use (COU)"
+  },
+  {
+    "abbr": "HOS",
+    "title": "Medicare Health Outcomes Survey (HOS)"
+  },
+  {
+    "abbr": "FRM",
+    "title": "Fall Risk Management (FRM)"
+  },
+  {
+    "abbr": "MUI",
+    "title": "Management of Urinary Incontinence in Older Adults (MUI)"
+  },
+  {
+    "abbr": "PAO",
+    "title": "Physical Activity in Older Adults (PAO)"
+  },
+  {
+    "abbr": "AAP",
+    "title": "Access to Preventive/Ambulatory Health Services (AAP)"
+  },
+  {
+    "abbr": "IET",
+    "title": "Initiation and Engagement of Substance Use Disorder Treatment (IET)"
+  },
+  {
+    "abbr": "PPC",
+    "title": "Prenatal and Postpartum Care (PPC)"
+  },
+  {
+    "abbr": "APP",
+    "title": "Line Psychosocial Care for Children and Adolescents on Antipsychotics (APP)"
+  },
+  {
+    "abbr": "CPA",
+    "title": "H, Adult Version (CPA)"
+  },
+  {
+    "abbr": "CPC",
+    "title": "H, Child Version (CPC)"
+  },
+  {
+    "abbr": "CCC",
+    "title": "Children With Chronic Conditions (CCC)"
+  },
+  {
+    "abbr": "WCV",
+    "title": "Care Visits (WCV)"
+  },
+  {
+    "abbr": "AXR",
+    "title": "Antibiotic Utilization for Respiratory Conditions (AXR)"
+  },
+  {
+    "abbr": "PCR",
+    "title": "Cause Readmissions (PCR)"
+  },
+  {
+    "abbr": "HFS",
+    "title": "Hospitalization Following Discharge From a Skilled Nursing Facility (HFS)"
+  },
+  {
+    "abbr": "HFC",
+    "title": "Acute Hospitalizations Following Outpatient Colonoscopy (HFC)"
+  },
+  {
+    "abbr": "HFG",
+    "title": "Acute Hospitalizations Following Outpatient General Surgery (HFG)"
+  },
+  {
+    "abbr": "HFO",
+    "title": "Acute Hospitalizations Following Outpatient Orthopedic Surgery (HFO)"
+  },
+  {
+    "abbr": "HFU",
+    "title": "Acute Hospitalizations Following Outpatient Urologic Surgery (HFU)"
+  },
+  {
+    "abbr": "AHU",
+    "title": "Acute Hospital Utilization (AHU)"
+  },
+  {
+    "abbr": "EDU",
+    "title": "Emergency Department Utilization (EDU)"
+  },
+  {
+    "abbr": "HPC",
+    "title": "Hospitalization for Potentially Preventable Complications (HPC)"
+  },
+  {
+    "abbr": "EDH",
+    "title": "Emergency Department Visits for Hypoglycemia in Older Adults With Diabetes (EDH)"
+  },
+  {
+    "abbr": "ENP",
+    "title": "Enrollment by Product Line (ENP)"
+  },
+  {
+    "abbr": "LDM",
+    "title": "Language Description of Membership (LDM)"
+  },
+  {
+    "abbr": "RDM",
+    "title": "Race/Ethnicity Description of Membership (RDM)"
+  },
+  {
+    "abbr": "DDM",
+    "title": "Disability Description of Membership (DDM)"
+  }
+]

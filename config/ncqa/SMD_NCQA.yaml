@@ -32,3 +32,4 @@ rules:
       table: lab
       value_set_names:
       - LDL-C Tests
+    logic_pathways: []

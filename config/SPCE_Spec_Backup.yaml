@@ -1,9 +1,9 @@
-measure_name: SMD
-description: SMD HEDIS Measure (Auto-generated from PDF)
+measure_name: SPC
+description: SPC HEDIS Measure (Auto-generated from PDF)
 rules:
   age_range:
   - 18
-  - 64
+  - 100
   age_as_of: December 31
   anchor_date_type: calendar_end
   continuous_enrollment:
@@ -14,18 +14,14 @@ rules:
   - event: Outpatient Visit
     value_set_names:
     - Outpatient
-    table: SMD_VISIT_IN
-  exclusions: []
+    table: SPC_VISIT_IN
+  exclusions:
+  - name: Hospice
+    value_set_names:
+    - Hospice Encounter
+    - Hospice Intervention
   clinical_events:
-    numerator_components:
-    - name: HbA1c test
-      table: lab/visit/rx/emr
-      value_set_names:
-      - HbA1c test
-    - name: LDL-C test
-      table: lab/visit/rx/systolic-diabetes
-      value_set_names:
-      - LDL-C test
+    numerator_components: []
     logic_pathways:
     - name: HbA1c Control
       description: HbA1c < 8.0%

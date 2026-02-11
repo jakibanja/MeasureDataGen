@@ -19,17 +19,16 @@ def progress():
             time.sleep(0.5)
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
-# Folder Configuration
-UPLOAD_FOLDER = 'uploads'      # Temporary uploads
-DATA_FOLDER = 'data'            # Processed test cases
-OUTPUT_FOLDER = 'output'        # Generated mockups
+# Folder Configuration (Pinned via .env)
+UPLOAD_FOLDER = 'uploads'
+DATA_DIR = os.getenv('DATA_DIR', 'data')
+TESTCASE_DIR = os.getenv('TESTCASE_DIR', 'data')
+OUTPUT_FOLDER = os.getenv('OUTPUT_DIR', 'output')
+VSD_PATH = os.getenv('VSD_PATH', 'data/VSD_MY2026.xlsx')
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(DATA_FOLDER, exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-
-# VSD Configuration - Use environment variable
-DEFAULT_VSD = os.getenv('VSD_PATH', 'data/VSD_MY2026.xlsx')
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -38,27 +37,37 @@ def index():
         measure = request.form.get('measure', 'PSA')
         model_name = request.form.get('model_name', 'qwen2:0.5b')
         
-        # 2. Handle Test Case Upload
+        # 2. Handle Test Case Selection (Upload or Pinned Folder)
         tc_path = None
         if 'testcase_file' in request.files and request.files['testcase_file'].filename:
             tc_file = request.files['testcase_file']
-            tc_path = os.path.join(UPLOAD_FOLDER, f"{measure}_TestCase.xlsx")
+            tc_path = os.path.join(UPLOAD_FOLDER, f"{measure}_Uploaded.xlsx")
             tc_file.save(tc_path)
-            flash(f"Test case file uploaded: {tc_file.filename}", "success")
+            flash(f"Test case uploaded: {tc_file.filename}", "success")
         else:
-            # Try default locations
-            tc_path = os.path.join('data', f"{measure}_MY2026_TestCase.xlsx")
-            if not os.path.exists(tc_path):
-                tc_path = os.path.join(UPLOAD_FOLDER, f"{measure}_TestCase.xlsx")
-                if not os.path.exists(tc_path):
-                    flash(f"No test case file found for {measure}. Please upload one.", "error")
-                    return redirect(url_for('index'))
+            # Check pinned TESTCASE_DIR for various measure patterns
+            patterns = [
+                f"{measure}_Input.xlsx",
+                f"{measure}_TestCase.xlsx",
+                f"{measure}_MY2026_TestCase.xlsx",
+                f"{measure}_Measure_TestCases.xlsx"
+            ]
+            for pattern in patterns:
+                candidate = os.path.join(TESTCASE_DIR, pattern)
+                if os.path.exists(candidate):
+                    tc_path = candidate
+                    flash(f"📁 Using pinned test case: {pattern}", "info")
+                    break
+            
+            if not tc_path:
+                flash(f"⚠️ No test case found for {measure} in {TESTCASE_DIR}. Please upload or check your .env pinpointing.", "error")
+                return redirect(url_for('index'))
         
-        # 3. Handle VSD Upload
-        vsd_path = DEFAULT_VSD
+        # 3. Handle VSD Selection
+        vsd_path = VSD_PATH
         if 'vsd_file' in request.files and request.files['vsd_file'].filename:
             vsd_file = request.files['vsd_file']
-            vsd_path = os.path.join(UPLOAD_FOLDER, "VSD_Current.xlsx")
+            vsd_path = os.path.join(UPLOAD_FOLDER, "VSD_Manual_Upload.xlsx")
             vsd_file.save(vsd_path)
             flash(f"VSD file uploaded: {vsd_file.filename}", "success")
 

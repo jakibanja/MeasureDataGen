@@ -13,6 +13,7 @@ class AuditLogger:
         os.makedirs(log_dir, exist_ok=True)
         self.log_file = os.path.join(log_dir, 'generation_history.jsonl')
         self.current_session = None
+        self.logs = []
     
     def start_session(self, measure_name, testcase_path, vsd_path, user=None):
         """Start a new generation session."""
@@ -109,6 +110,17 @@ class AuditLogger:
         print(f"{status_icon} Audit Session Ended: {self.current_session['session_id']}")
         
         self.current_session = None
+    
+    def log(self, level, message):
+        from src.progress import progress_tracker
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = f"[{timestamp}] {level.upper()}: {message}"
+        self.logs.append(log_entry)
+        
+        # Real-time UI feed
+        progress_tracker.update(f"🛡️ {level.upper()}: {message}")
+        
+        print(log_entry)
     
     def _generate_session_id(self):
         """Generate unique session ID."""

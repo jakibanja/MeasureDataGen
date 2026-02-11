@@ -20,25 +20,25 @@ class SchemaManager:
             with open(self.schema_path, 'r') as f:
                 self.schema = json.load(f)
         else:
-            print(f"⚠️ Schema file {self.schema_path} not found. Starting fresh.")
+            print(f"Warning: Schema file {self.schema_path} not found. Starting fresh.")
             self.schema = {}
 
     def save_schema(self):
         """Save the current schema to JSON."""
         with open(self.schema_path, 'w') as f:
             json.dump(self.schema, f, indent=4)
-        print(f"✅ Schema saved to {self.schema_path}")
+        print(f"Schema saved to {self.schema_path}")
 
     def universalize_schema(self, source_measure='PSA'):
         """
         Create TEMPLATE_* tables based on a robust source measure (default: PSA).
         This decouples future measures from legacy naming.
         """
-        print(f"🔄 Universalizing schema using {source_measure} as base...")
+        print(f"Universalizing schema using {source_measure} as base...")
         
         # Check if templates already exist
         if any(k.startswith('TEMPLATE_') for k in self.schema.keys()):
-            print("  ℹ️ TEMPLATE_* tables already exist. Skipping creation.")
+            print("  TEMPLATE_* tables already exist. Skipping creation.")
             return
 
         new_templates = {}
@@ -55,14 +55,14 @@ class SchemaManager:
             self.schema.update(new_templates)
             self.save_schema()
         else:
-            print(f"⚠️ Could not find any tables starting with {source_measure}_ to use as templates.")
+            print(f"Warning: Could not find any tables starting with {source_measure}_ to use as templates.")
 
     def expand_schema(self, new_measure_name):
         """
         Ensure schema exists for a new measure by cloning TEMPLATE_* tables.
         """
         new_measure_name = new_measure_name.upper()
-        print(f"🔄 Expanding schema for {new_measure_name}...")
+        print(f"Expanding schema for {new_measure_name}...")
 
         # 1. Ensure we have templates
         if not any(k.startswith('TEMPLATE_') for k in self.schema.keys()):
@@ -83,7 +83,7 @@ class SchemaManager:
             self.schema.update(new_tables)
             self.save_schema()
         else:
-            print(f"  ℹ️ Schema for {new_measure_name} already complete.")
+            print(f"  Schema for {new_measure_name} already complete.")
 
 if __name__ == "__main__":
     # Test Run

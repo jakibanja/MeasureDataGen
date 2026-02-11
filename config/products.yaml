@@ -1,22 +1,22 @@
 # Product Line Configuration
 # Map scenario keywords to real IDs and Names for your database
 COMMERCIAL:
-  id: "PROD_COMM"
+  id: "246"
   name: "COMMERCIAL"
   coverage_indicator: "C"
 MEDICAID:
-  id: "PROD_MCD"
+  id: "162"
   name: "MEDICAID"
   coverage_indicator: "M"
 MEDICARE:
-  id: "PROD_MCR"
+  id: "150"
   name: "MEDICARE"
   coverage_indicator: "R"
 EXCHANGE:
-  id: "PROD_QHP"
+  id: "254"
   name: "EXCHANGE"
   coverage_indicator: "E"
 DEFAULT:
-  id: "PROD_UNK"
+  id: "99"
   name: "UNKNOWN"
   coverage_indicator: "U"

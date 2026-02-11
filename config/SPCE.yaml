@@ -1,0 +1,77 @@
+measure_name: SPCE
+measure_title: Statin Therapy for Patients With Cardiovascular Disease
+abbreviation: SPCE
+measurement_year: 2026
+
+rules:
+  # Gender-specific Age Logic (Male 21-75, Female 40-75)
+  # The engine handles standard age_range; we'll use a descriptive range
+  # and allow the scenario parser to handle specific gender constraints if needed.
+  age_range: [21, 75] 
+  age_stratification:
+    - gender: M
+      age_range: [21, 75]
+    - gender: F
+      age_range: [40, 75]
+  continuous_enrollment:
+    period_months: 24  # MY-1 and MY
+    allowable_gap_days: 45
+  
+  clinical_events:
+    # STEP 1: Identification (Denominator)
+    denominator_components:
+      - name: AMI
+        table: visit
+        value_set_names:
+          - Acute Inpatient
+          - AMI
+        count: 1
+      
+      - name: CABG
+        table: visit
+        value_set_names:
+          - CABG
+        count: 1
+      
+      - name: PCI
+        table: visit
+        value_set_names:
+          - PCI
+        count: 1
+        
+      - name: IVD
+        table: visit
+        value_set_names:
+          - IVD
+        count: 1
+
+    # STEP 2: Numerator Compliance
+    numerator_components:
+      - name: Statin
+        table: rx
+        value_set_names:
+          - High Intensity Statin Medications
+          - Low and Moderate Intensity Statin Medications
+        count: 4
+        min_separation_days: 90
+        days_supply: 90
+        quantity: 90
+
+    # STEP 3: Logic Pathways (Optional - for documentation)
+    logic_pathways:
+      - name: Admin Pathway
+        steps: [Identification, Statin Therapy]
+
+  exclusions:
+    - name: Pregnancy
+      value_set_names: [Pregnancy]
+    - name: IVF
+      value_set_names: [IVF]
+    - name: ESRD
+      value_set_names: [ESRD]
+    - name: Cirrhosis
+      value_set_names: [Cirrhosis]
+    - name: Muscular Reactions to Statins
+      value_set_names: [Muscular Reactions to Statins]
+    - name: Palliative Care
+      value_set_names: [Palliative Care]

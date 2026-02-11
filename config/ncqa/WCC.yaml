@@ -1,9 +1,9 @@
-measure_name: SMD
-description: SMD HEDIS Measure (Auto-generated from PDF)
+measure_name: WCC
+description: WCC HEDIS Measure (Auto-generated from PDF)
 rules:
   age_range:
-  - 18
-  - 64
+  - 3
+  - 17
   age_as_of: December 31
   anchor_date_type: calendar_end
   continuous_enrollment:
@@ -14,18 +14,21 @@ rules:
   - event: Outpatient Visit
     value_set_names:
     - Outpatient
-    table: SMD_VISIT_IN
-  exclusions: []
+    table: WCC_VISIT_IN
+  exclusions:
+  - name: Hospice
+    value_set_names:
+    - Hospice Encounter
+    - Hospice Intervention
+  - name: Death
+    criteria: Death during measurement period
   clinical_events:
     numerator_components:
-    - name: HbA1c test
+    - name: Component Name
       table: lab/visit/rx/emr
+      description: Short description
       value_set_names:
-      - HbA1c test
-    - name: LDL-C test
-      table: lab/visit/rx/systolic-diabetes
-      value_set_names:
-      - LDL-C test
+      - Component Name
     logic_pathways:
     - name: HbA1c Control
       description: HbA1c < 8.0%

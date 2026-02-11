@@ -45,7 +45,7 @@ config = parser.generate_config(output_path="config/test_SMD_AI.yaml", target_me
 # Verify Output
 print("\n--- Verification Report ---")
 if 'denominator_components' in config['rules']['clinical_events']:
-    print("✅ Denominator Components Found:")
+    print(" Denominator Components Found:")
     for comp in config['rules']['clinical_events']['denominator_components']:
         print(f"  - Name: {comp['name']}")
         print(f"    Count: {comp.get('count', 1)}")
@@ -54,4 +54,4 @@ if 'denominator_components' in config['rules']['clinical_events']:
         if comp.get('type') == 'composite':
              print(f"    Type: Composite ({len(comp.get('events', []))} sub-events)")
 else:
-    print("❌ NO Denominator Components Found! (Check extracted text or AI prompt)")
+    print(" NO Denominator Components Found! (Check extracted text or AI prompt)")

@@ -116,7 +116,10 @@ class SmartTemplateGenerator:
         ws.add_data_validation(dv_pl)
         dv_pl.add('D2:D1000')
 
-        # 4. Instructions Row (Optional, maybe in a separate sheet)
+        # 4. Add Sample Rows (to avoid "empty" feel)
+        self.add_sample_rows(ws, valid_events, valid_exclusions)
+
+        # 5. Instructions Row (Optional, maybe in a separate sheet)
         # For now, just setting column widths
         for col in ws.columns:
             max_length = 0
@@ -136,6 +139,37 @@ class SmartTemplateGenerator:
         print(f"✅ Smart Template generated: {output_path}")
         print(f"   - Events linked: {valid_events}")
         print(f"   - Exclusions linked: {valid_exclusions}")
+
+    def add_sample_rows(self, ws, valid_events, valid_exclusions):
+        """Add 2-3 sample rows to guide the user."""
+        event_1 = valid_events[0] if valid_events else "Sample Screening"
+        excl_1 = valid_exclusions[0] if valid_exclusions else "Hospice"
+        
+        samples = [
+            [
+                f'{self.measure_name}_MEMBER_01', 65, 'M', 'Medicare',
+                '2026-01-01', '2026-12-31', 
+                '2026-03-15', 'Outpatient', 
+                event_1, 'Compliant', '2026-05-20',
+                '', '', '',
+                '', '', '',
+                '1', 'Sample Compliant Case'
+            ],
+            [
+                f'{self.measure_name}_MEMBER_02', 45, 'F', 'Commercial',
+                '2026-01-01', '2026-12-31', 
+                '2026-06-10', 'Office Visit', 
+                '', '', '',
+                '', '', '',
+                excl_1, 'Excluded', '2026-08-15',
+                '0', 'Sample Exclusion Case'
+            ]
+        ]
+        
+        for row in samples:
+            ws.append(row)
+            
+        print(f"   - Added {len(samples)} sample rows")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate Smart Excel Template')

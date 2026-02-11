@@ -48,7 +48,38 @@ class MockupEngine:
         # Age as of Dec 31
         return datetime(self.year - age, 6, 15) # Middle of year birth
 
+    def validate_demographics(self, age, gender):
+        """
+        Validates age/gender against config-defined stratification rules (e.g. SPCE).
+        Returns (is_valid, suggested_age, suggested_gender)
+        """
+        strat = self.measure['rules'].get('age_stratification', [])
+        if not strat:
+            # Fallback to standard age_range if no stratification
+            rng = self.measure['rules'].get('age_range', [18, 100])
+            if age < rng[0] or age > rng[1]:
+                return False, rng[0], gender
+            return True, age, gender
+
+        # Find matching stratification rule by gender
+        rule = next((s for s in strat if s.get('gender', '').upper() == gender.upper()), None)
+        if not rule:
+            # If no gender-specific rule, use first one or default
+            rule = strat[0] if strat else {'age_range': [18, 100]}
+
+        rng = rule.get('age_range', [18, 100])
+        if age < rng[0] or age > rng[1]:
+             # Suggest midpoint of valid range
+             return False, (rng[0] + rng[1]) // 2, gender
+        
+        return True, age, gender
+
     def generate_member_base(self, mem_id, age, gender='F', overrides=None):
+        # ⚡ Robustness: Validate against stratification rules
+        is_valid, age, gender = self.validate_demographics(age, gender)
+        if not is_valid:
+            print(f"  ⚠️  Adjusting age to {age} for member {mem_id} to meet stratification rules.")
+
         dob = self.calculate_birth_date(age)
         
         # Seed faker with member ID for deterministic output
@@ -455,7 +486,7 @@ class MockupEngine:
         specific_qty = 30
         
         # Priority 1: Specific metadata passed directly (for multi-event scenarios)
-        meta = overrides.get('specific_metadata')
+        meta = overrides.get('specific_metadata') if overrides else None
         
         # Priority 2: Global overrides by name (legacy/single-event support)
         if not meta and overrides and 'events' in overrides and component_name in overrides['events']:
@@ -463,6 +494,11 @@ class MockupEngine:
             # Handle list-based metadata (take first if list) - fallback
             if isinstance(meta, list) and meta:
                 meta = meta[0]
+
+        # Priority 3: Component level defaults from YAML
+        if component:
+            specific_days = component.get('days_supply', 30)
+            specific_qty = component.get('quantity', specific_days)
 
         if meta:
             if 'date' in meta:
@@ -478,6 +514,16 @@ class MockupEngine:
                 specific_days = meta['days_supply']
             if 'quantity' in meta:
                 specific_qty = meta['quantity']
+
+        # ⚡ Randomized Lab Values Support
+        if is_compliant and component.get('table') == 'lab' and 'value_range' in component:
+             import random
+             low, high = component['value_range']
+             # Format as float string if range contains floats
+             if isinstance(low, float) or isinstance(high, float):
+                 specific_value = f"{random.uniform(low, high):.1f}"
+             else:
+                 specific_value = str(random.randint(low, high))
 
         row = {
             target_table['fk'] if 'fk' in target_table else target_table['pk']: mem_id,
@@ -535,9 +581,11 @@ class MockupEngine:
                 target_field = target_table['fields'].get('procedure_codes', ['CPT_1'])[0]
                 row[target_field] = code
                 if not row.get('_CODE'): row['_CODE'] = code # Fallback
-            elif component_name == "PSA Test":
-                row[target_table['fields'].get('cpt', 'LAB_CPT')] = final_code if final_code else '84153'
-                row[target_table['fields'].get('value', 'LAB_VALUE')] = specific_value if specific_value is not None else '1.0'
+            elif component_name == "PSA Test" or table_key == 'lab':
+                # Use value_range if provided, else default
+                val = specific_value if specific_value is not None else ('1.0' if component_name == "PSA Test" else '0.1')
+                row[target_table['fields'].get('value', 'LAB_VALUE')] = val
+                row[target_table['fields'].get('cpt', 'LAB_CPT')] = final_code if final_code else '80000'
             elif final_code:
                 # Catch-all for other components if we found a code
                 code_field = target_table['fields'].get('procedure_codes', [target_table['fields'].get('cpt', 'CPT_1')])[0]
@@ -547,7 +595,7 @@ class MockupEngine:
                 for f, v in overrides.items():
                     if f in row: row[f] = v
 
-        return table_key, row
+        return target_table['name'], row
 
     def _populate_rx_fields(self, row, target_table, mem_id, product_line='COMMERCIAL'):
         """Populates rich metadata for pharmacy claims using schema mapping."""

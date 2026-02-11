@@ -1,5 +1,5 @@
 measure_name: SMD
-description: SMD HEDIS Measure (Synced with NCQA Standard)
+description: Diabetes Screening for People With Schizophrenia or Bipolar Disorder Who Are Using Antipsychotic Medications
 rules:
   age_range:
   - 18
@@ -10,66 +10,50 @@ rules:
     period_months: 12
     allowable_gap_days: 45
     no_gap_on_last_day: true
-  initial_population: 
-    # Logic is now handled by composite events below
-    - event: "Outpatient Visit"
-      value_set_names: ["Outpatient"]
-      table: "visit"
-
+  initial_population:
+  - event: Outpatient Visit
+    value_set_names:
+    - Outpatient POS
+    table: visit
+  exclusions:
+  - name: Hospice
+    value_set_names:
+    - Hospice Encounter
+    - Hospice Intervention
+  - name: Death
+    criteria: Death during measurement period
   clinical_events:
+    # Step 1: Identify persons with Schizophrenia (Denominator Criteria)
     denominator_components:
-      # --- Step 1: Schizophrenia Cohort ---
-      - name: "Schizophrenia_Inpatient"
-        count: 1
-        table: visit
-        value_set_names: ["BH Stand Alone Acute Inpatient", "Schizophrenia"]
-        diagnosis_pattern: "Schizophrenia"
-        overrides:
-          POS: "21"
-          REV: "0100"
-          BILL_TYPE: "111"
-
-      - name: "Schizophrenia_Outpatient_History"
-        count: 2
-        min_separation_days: 14
-        table: visit
-        value_set_names: ["Outpatient", "Schizophrenia"]
-        diagnosis_pattern: "Schizophrenia"
-        overrides:
-          POS: "11"
-
-      # --- Step 2: Diabetes Cohort ---
-      - name: "Diabetes_Clinical_History"
-        count: 2
-        min_separation_days: 30
-        table: visit
-        value_set_names: ["Diabetes"]
-        diagnosis_pattern: "Diabetes"
-        overrides:
-          POS: "11"
-
-      - name: "Diabetes_Pharmacy_History"
-        type: composite
-        events: 
-          - table: visit
-            diagnosis_pattern: "Diabetes"
-            value_set_names: ["Diabetes"]
-          - table: rx
-            value_set_names: ["Diabetes Medications"]
-            drug_class: "Diabetes Medications"
-
+    - name: Schizophrenia Diagnosis
+      table: visit
+      value_set_names:
+      - Schizophrenia
+      count: 2
+      min_separation_days: 1
+      description: "At least two visits with schizophrenia diagnosis on different dates"
+    # Step 2: Identify persons with Diabetes (Additional Denominator Criteria)
+    - name: Diabetes Diagnosis
+      table: visit
+      value_set_names:
+      - Diabetes
+      count: 2
+      min_separation_days: 1
+      description: "At least two diabetes diagnoses on different dates during MY or prior year"
+    - name: Diabetes Medication
+      table: rx
+      value_set_names:
+      - Diabetes
+      count: 1
+      description: "Optional: At least one diabetes medication dispensing event (if using pharmacy data pathway)"
+    # Numerator: What the patient should receive
     numerator_components:
     - name: HbA1c Test
-      value_set_names:
-      - HbA1c Tests
-      - Glucose Lab Test
       table: lab
+      value_set_names:
+      - HbA1c Lab Test
     - name: LDL-C Test
-      value_set_names:
-      - LDL-C Tests
-      - Lipid Panel
       table: lab
-    - name: Medication
       value_set_names:
-      - Antipsychotic Medications
-      table: rx
+      - LDL C Lab Test
+    logic_pathways: []

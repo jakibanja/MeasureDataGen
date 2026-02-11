@@ -51,7 +51,7 @@ class VSDManager:
                     # print(f"Checking sheet: '{sheet}'...")
                     found_df = self._scan_sheet_for_headers(sheet)
                     if found_df is not None:
-                        print(f"✅ Discovered VSD in sheet: '{sheet}'")
+                        print(f"[OK] Discovered VSD in sheet: '{sheet}'")
                         return found_df
 
         # 3. Last scan: Check ALL sheets
@@ -59,7 +59,7 @@ class VSDManager:
         for sheet in sheet_names:
             found_df = self._scan_sheet_for_headers(sheet)
             if found_df is not None:
-                print(f"✅ Structure matched in sheet: '{sheet}'")
+                print(f"[OK] Structure matched in sheet: '{sheet}'")
                 return found_df
         
         raise ValueError(f"Could not locate a valid Value Set sheet in {self.vsd_path}. Checked sheets: {sheet_names}")
@@ -138,7 +138,7 @@ class VSDManager:
 
     def _build_fast_lookup(self):
         """Build dictionary-based lookups for O(1) performance."""
-        print("⚡ Building fast VSD lookup cache...")
+        print("Building fast VSD lookup cache...")
         # 1. Filter valid codes for MY once
         my_start = datetime(self.measurement_year, 1, 1)
         my_end = datetime(self.measurement_year, 12, 31)
@@ -171,12 +171,12 @@ class VSDManager:
         if sys_col in valid_df.columns:
             self.code_to_system = unique_codes.set_index('Code')[sys_col].to_dict()
         else:
-            print(f"⚠️ 'Code System' column not found in VSD keys: {valid_df.columns.tolist()}")
+            print(f"[WARN] 'Code System' column not found in VSD keys: {valid_df.columns.tolist()}")
             self.code_to_system = {}
         
         # 4. Cache unique names for regex search
         self.unique_names = list(self.vsd_map.keys())
-        print(f"   ✓ Cached {len(self.unique_names)} value sets, {len(valid_df)} valid codes, {len(self.code_to_system)} system lookups")
+        print(f"   [OK] Cached {len(self.unique_names)} value sets, {len(valid_df)} valid codes, {len(self.code_to_system)} system lookups")
 
     def get_code_system(self, code):
         """

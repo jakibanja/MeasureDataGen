@@ -9,6 +9,9 @@ def run_verification():
     # Init Engine
     engine = MockupEngine('config/SMD.yaml', 'config/schema_map.yaml', year=2026, mocking_depth='scenario')
     
+    # Create reverse mapping: Physical Name -> Logical Key
+    phys_to_logical = {cfg['name']: key for key, cfg in engine.schema['tables'].items()}
+
     # Mock Data Store
     data_store = {}
     for t in engine.schema['tables']:
@@ -16,9 +19,9 @@ def run_verification():
         
     # Define Complex Component to Test
     components_to_test = [
-        "Schizophrenia_Inpatient",          # Count 1
-        "Schizophrenia_Outpatient_History", # Count 2
-        "Diabetes_Pharmacy_History"         # Composite (Visit + Rx)
+        "Schizophrenia Diagnosis",
+        "Diabetes Diagnosis",
+        "Diabetes Medication"
     ]
     
     mem_id = "VERIFY_MEMBER_01"
@@ -43,9 +46,12 @@ def run_verification():
             events_to_process = [result]
             
         # Process Results
-        for table, row in events_to_process:
-            if table not in data_store:
-                print(f"  ⚠️ Warning: Table {table} not in schema!")
+        for table_phys, row in events_to_process:
+            # Resolve physical table name to logical key
+            table = phys_to_logical.get(table_phys)
+            
+            if not table or table not in data_store:
+                print(f"  Warning: Table {table_phys} (logical: {table}) not in schema!")
                 continue
             data_store[table].append(row)
             # Log key fields
@@ -65,9 +71,9 @@ def run_verification():
     print(f"Rx Count:    {rx_count}    (Expected: 1 Diab Rx = 1)")
     
     if visit_count == 4 and rx_count == 1:
-        print("\n✅ SUCCESS: All complex logic verified!")
+        print("\n SUCCESS: All complex logic verified!")
     else:
-        print("\n❌ FAILURE: Counts do not match expectations.")
+        print("\n FAILURE: Counts do not match expectations.")
 
 if __name__ == "__main__":
     run_verification()

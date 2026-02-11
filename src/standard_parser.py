@@ -240,60 +240,78 @@ class StandardFormatParser:
         numerator_components = measure_config.get('rules', {}).get('clinical_events', {}).get('numerator_components', [])
         component_names = {comp['name'].lower(): comp['name'] for comp in numerator_components}
         
-        # Check up to 10 events
+        # ⚡ Robust Column Matching (Direct columns like PSA_TEST)
+        for col in row.index:
+            col_str = str(col).strip().lower()
+            # Skip reserved prefixes
+            if any(col_str.startswith(p.lower()) for p in ['member_id', 'age', 'gender', 'product_line', 'enrollment', 'visit', 'notes']):
+                continue
+                
+            # Match against component names
+            matched_comp = None
+            for comp_name_lower, real_name in component_names.items():
+                # Exact match or component_name_test or component_name_val
+                if col_str == comp_name_lower or col_str.replace('_', ' ') == comp_name_lower or col_str.startswith(comp_name_lower):
+                    matched_comp = real_name
+                    break
+            
+            if matched_comp:
+                val = row[col]
+                if self._is_truthy(val) and matched_comp not in compliant:
+                    compliant.append(matched_comp)
+                    # Look for date in sibling column
+                    date_val = None
+                    date_col = f"{col}_DATE"
+                    if date_col in row:
+                        date_val = row[date_col]
+                    elif f"{col}_DT" in row:
+                        date_val = row[f"{col}_DT"]
+                        
+                    meta = {'value': val}
+                    if pd.notna(date_val): meta['date'] = str(date_val).strip()
+                    
+                    if 'events' not in overrides: overrides['events'] = {}
+                    if matched_comp not in overrides['events']: overrides['events'][matched_comp] = []
+                    overrides['events'][matched_comp].append(meta)
+
+        # ⚡ Standard EVENT_X Matching
         for i in range(1, 11):
             name_col = f'EVENT_{i}_NAME'
             value_col = f'EVENT_{i}_VALUE'
-            
+            # ... (rest of old code structure)
             if name_col not in row or pd.isna(row[name_col]):
-                continue  # No event at this position
+                continue
             
             event_name = str(row[name_col]).strip()
             event_value = row.get(value_col, 0)
             
-            # Check if event is present (value = 1, Y, yes, etc.)
-            is_present = False
-            if pd.notna(event_value):
-                val_str = str(event_value).strip().upper()
-                if val_str in ['1', 'Y', 'YES', 'TRUE']:
-                    is_present = True
-                elif val_str.replace('.', '').isdigit():
-                    # Numeric value (e.g., BMI percentile)
-                    is_present = float(val_str) > 0
-            
-            if is_present:
-                # Match event name to component name (case-insensitive)
-                event_name_matched = event_name
-                event_name_lower = event_name.lower()
-                if event_name_lower in component_names:
-                    event_name_matched = component_names[event_name_lower]
+            if self._is_truthy(event_value):
+                event_name_matched = component_names.get(event_name.lower(), event_name)
+                if event_name_matched not in compliant:
+                    compliant.append(event_name_matched)
                 
-                compliant.append(event_name_matched)
-                
-                # Check for metadata (CODE, DATE, VALUE)
+                # ... metadata handling ...
                 code_col = f'EVENT_{i}_CODE'
                 date_col = f'EVENT_{i}_DATE'
+                event_meta = {'value': event_value}
+                if code_col in row and pd.notna(row[code_col]): event_meta['code'] = str(row[code_col]).strip()
+                if date_col in row and pd.notna(row[date_col]): event_meta['date'] = str(row[date_col]).strip()
                 
-                event_meta = {'value': event_value} # Always include value
-                if code_col in row and pd.notna(row[code_col]):
-                    event_meta['code'] = str(row[code_col]).strip()
-                if date_col in row and pd.notna(row[date_col]):
-                    event_meta['date'] = str(row[date_col]).strip()
-                    
-                if event_meta:
-                    # Initialize overrides['events'] if it doesn't exist
-                    # We'll use the matched name for linking
-                    if 'events' not in overrides: overrides['events'] = {}
-                    # Store as list to support multiple events of same type
-                    if event_name_matched not in overrides['events']:
-                        overrides['events'][event_name_matched] = []
-                    elif isinstance(overrides['events'][event_name_matched], dict):
-                         # Convert legacy dict to list if needed
-                         overrides['events'][event_name_matched] = [overrides['events'][event_name_matched]]
-                    
-                    overrides['events'][event_name_matched].append(event_meta)
+                if 'events' not in overrides: overrides['events'] = {}
+                if event_name_matched not in overrides['events']: overrides['events'][event_name_matched] = []
+                overrides['events'][event_name_matched].append(event_meta)
         
         return compliant
+
+    def _is_truthy(self, val) -> bool:
+        """Helper to determine if a value indicates compliance."""
+        if pd.isna(val): return False
+        v_str = str(val).strip().upper()
+        if v_str in ['1', 'Y', 'YES', 'TRUE', 'COMPLIANT', 'C']: return True
+        try:
+            return float(v_str) > 0
+        except:
+            return False
 
     def _parse_exclusions(self, row: pd.Series, measure_config: Dict[str, Any], overrides: Dict[str, Any]) -> List[str]:
         """
@@ -323,7 +341,7 @@ class StandardFormatParser:
             is_present = False
             if pd.notna(exclusion_value):
                 val_str = str(exclusion_value).strip().upper()
-                if val_str in ['1', 'Y', 'YES', 'TRUE']:
+                if val_str in ['1', 'Y', 'YES', 'TRUE', 'EXCLUDED']:
                     is_present = True
             
             if is_present:

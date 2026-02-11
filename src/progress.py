@@ -15,7 +15,7 @@ class ProgressTracker:
                 cls._instance.listeners = []
         return cls._instance
 
-    def update(self, status, member_count=None, record_count=None, details=None):
+    def update(self, status, member_count=None, record_count=None, details=None, percent=None):
         update_data = {
             'status': status,
             'timestamp': time.time()
@@ -23,6 +23,7 @@ class ProgressTracker:
         if member_count is not None: update_data['member_count'] = member_count
         if record_count is not None: update_data['record_count'] = record_count
         if details is not None: update_data['details'] = details
+        if percent is not None: update_data['percent'] = percent
         
         self.progress = update_data
         
