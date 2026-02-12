@@ -52,6 +52,26 @@ class MockupEngine:
             with open(med_codes_path, 'r') as f:
                 self.medication_codes = json.load(f)
             print(f"  🎯 Loaded {len(self.medication_codes)} HEDIS Medication Value Sets for code overrides.")
+        
+        # ⚡ Phase 4: Load File ID Mappings (Primary/Supplemental Source Compliance)
+        file_ids_path = os.path.join(os.path.dirname(measure_config_path), 'file_ids.yaml')
+        self.file_ids = {}
+        if os.path.exists(file_ids_path):
+            with open(file_ids_path, 'r') as f:
+                data = yaml.safe_load(f)
+                if data and 'file_ids' in data:
+                    for item in data['file_ids']:
+                        cat = item['Category']
+                        if cat not in self.file_ids: self.file_ids[cat] = []
+                        self.file_ids[cat].append(item['FILE_ID'])
+            print(f"  📂 Loaded {len(data['file_ids'])} File ID mappings for source compliance.")
+
+    def _get_random_file_id(self, category):
+        """Returns a random FILE_ID for a given source category (e.g., VISIT_IN)."""
+        import random
+        if category in self.file_ids:
+            return random.choice(self.file_ids[category])
+        return 90000 # Default fallback
 
     def calculate_birth_date(self, age):
         # Age as of Dec 31
@@ -115,7 +135,7 @@ class MockupEngine:
             
         lname = self.fake.last_name()
         
-        return {
+        res = {
             self.schema['tables']['member']['pk']: mem_id,
             self.schema['tables']['member']['fields']['dob']: dob,
             self.schema['tables']['member']['fields']['gender']: gender,
@@ -130,6 +150,10 @@ class MockupEngine:
             self.schema['tables']['member']['fields']['hic']: f"{self.fake.random_number(digits=9)}A",
             self.schema['tables']['member']['fields']['mbi']: self.fake.bothify(text='?#??-?#?-?#??').upper()
         }
+        
+        # ⚡ Source Compliance
+        if 'file_id' in self.schema['tables']['member']['fields']:
+            res[self.schema['tables']['member']['fields']['file_id']] = self._get_random_file_id('MEMBER_IN')
         
         if overrides:
             for field, val in overrides.items():
@@ -181,6 +205,9 @@ class MockupEngine:
         # Comprehensive Default flags and Identifiers based on user image
         base_record = {
             'BEN_MEDICAL': 1,
+            'BEN_MED_INP': 1,
+            'BEN_MED_INT': 1,
+            'BEN_MED_AMB': 1,
             'BEN_DENT': 0,
             'BEN_RX': 1,
             'BEN_MH_INP': 1,
@@ -226,6 +253,10 @@ class MockupEngine:
                 'PRODUCT_ID': final_pid,
                 'PRODUCT_ID_2': final_pid
             }
+
+            # ⚡ Source Compliance
+            if 'file_id' in target_table['fields']:
+                row[target_table['fields']['file_id']] = self._get_random_file_id('ENROLLMENT_IN')
 
             # 1. Apply Global Overrides (Generic matches)
             if overrides:
@@ -618,6 +649,8 @@ class MockupEngine:
                     row[target_table['fields']['ndc']] = final_code
                     row[target_table['fields']['days_supply']] = specific_days
                     row[target_table['fields']['quantity']] = specific_qty
+                elif table_key == 'lab':
+                    row[target_table['fields']['cpt']] = final_code if final_code else '80000'
             else:
                 row['_CODE'] = 'MANUAL'
             
@@ -627,6 +660,10 @@ class MockupEngine:
                     self._populate_rx_fields(row, target_table, mem_id, product_line=product_line)
                 elif table_key == 'visit':
                     self._populate_visit_fields(row, target_table, mem_id, product_line=product_line)
+                elif table_key == 'lab':
+                    self._populate_lab_fields(row, target_table, mem_id, product_line=product_line)
+                elif table_key == 'emr':
+                    self._populate_emr_fields(row, target_table, mem_id, product_line=product_line)
 
             # Add a realistic diagnosis if it's a visit (Force it even if code wasn't found)
             if table_key == 'visit' and self.vsd_manager and not row.get("DIAG_I_1"):
@@ -682,6 +719,10 @@ class MockupEngine:
             prod_info = self.product_config.get(product_line.upper(), {})
             # Ensure it is the numeric ID e.g. "150"
             row[fields['product_id']] = prod_info.get('id', self.pl_map.get(product_line, product_line))
+        
+        # Source Identity
+        if 'file_id' in fields:
+            row[fields['file_id']] = self._get_random_file_id('RX_IN')
 
     def _populate_visit_fields(self, row, target_table, mem_id, product_line='COMMERCIAL'):
         """Populates rich metadata for medical visits (Claims, POS, NPIs)."""
@@ -710,6 +751,22 @@ class MockupEngine:
         if 'product_id' in fields:
             prod_info = self.product_config.get(product_line.upper(), {})
             row[fields['product_id']] = prod_info.get('id', product_line.upper())
+            
+        # Source Identity
+        if 'file_id' in fields:
+            row[fields['file_id']] = self._get_random_file_id('VISIT_IN')
+
+    def _populate_lab_fields(self, row, target_table, mem_id, product_line='COMMERCIAL'):
+        """Populates rich metadata for lab results."""
+        fields = target_table.get('fields', {})
+        if 'file_id' in fields:
+            row[fields['file_id']] = self._get_random_file_id('LAB_IN')
+
+    def _populate_emr_fields(self, row, target_table, mem_id, product_line='COMMERCIAL'):
+        """Populates rich metadata for EMR/Clinical Observations."""
+        fields = target_table.get('fields', {})
+        if 'file_id' in fields:
+            row[fields['file_id']] = self._get_random_file_id('EMR_IN')
 
     def generate_exclusion(self, mem_id, exclusion_name, overrides=None):
         # Find exclusion in config
@@ -746,6 +803,9 @@ class MockupEngine:
                 target_table['fields']['run_date']: event_date,
                 target_table['fields']['hospice_flag']: 1 # Use numeric 1 for hospice
             }
+            if 'file_id' in target_table['fields']:
+                row[target_table['fields']['file_id']] = self._get_random_file_id('MONTHLY_MBR_IN')
+            
             if overrides:
                 for f, v in overrides.items():
                     if f in row or f == 'HOSPICE': row[target_table['fields']['hospice_flag']] = v

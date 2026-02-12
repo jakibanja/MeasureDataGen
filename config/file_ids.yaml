@@ -1,0 +1,114 @@
+file_ids:
+  # ECDS / EMR
+  - FILE_ID: 18157
+    Description: TEST_ECDS
+    Category: EMR_IN
+  - FILE_ID: 18155
+    Description: QA PRIMARY EMR_IN
+    Category: EMR_IN
+  - FILE_ID: 18055
+    Description: QA SUPPL EMR_IN
+    Category: EMR_IN
+
+  # Core Data
+  - FILE_ID: 4000
+    Description: PRIMARY MEMBER_IN
+    Category: MEMBER_IN
+  - FILE_ID: 4001
+    Description: PRIMARY ENROLLMENT_IN
+    Category: ENROLLMENT_IN
+
+  # Visits
+  - FILE_ID: 17999
+    Description: VISIT - VERSCEND IMPUTED CLAIMS
+    Category: VISIT_IN
+  - FILE_ID: 90002
+    Description: PRIMARY DATA SOURCE FILE 01
+    Category: VISIT_IN
+  - FILE_ID: 90014
+    Description: PRIMARY DATA SOURCE FILE 02
+    Category: VISIT_IN
+  - FILE_ID: 90013
+    Description: PRIMARY DATA SOURCE FILE 03
+    Category: VISIT_IN
+  - FILE_ID: 90001
+    Description: PRIMARY DATA SOURCE FILE 04
+    Category: VISIT_IN
+  - FILE_ID: 90009
+    Description: PRIMARY DATA SOURCE FILE 05
+    Category: VISIT_IN
+  - FILE_ID: 95000
+    Description: PRIMARY VISIT_22_IN
+    Category: VISIT_IN
+  - FILE_ID: 90000
+    Description: PRIMARY VISIT_IN
+    Category: VISIT_IN
+  - FILE_ID: 90055
+    Description: QA PRIMARY VISIT_IN
+    Category: VISIT_IN
+  - FILE_ID: 17955
+    Description: QA SUPPL VISIT_IN
+    Category: VISIT_IN
+  - FILE_ID: 17900
+    Description: SUPPL VISIT_IN
+    Category: VISIT_IN
+  - FILE_ID: 17955
+    Description: QA SUPPL VISIT_IN
+    Category: VISIT_IN
+  - FILE_ID: 17113
+    Description: Suplemental data Laboratory results 01
+    Category: LAB_IN
+  - FILE_ID: 17900
+    Description: SUPPL VISIT_IN
+    Category: VISIT_IN
+  - FILE_ID: 17000
+    Description: SUPPL_LAB_IN
+    Category: LAB_IN
+  - FILE_ID: 17804
+    Description: Supplemental Source data file 01
+    Category: VISIT_IN
+  - FILE_ID: 17803
+    Description: Supplemental Source data file 04
+    Category: VISIT_IN
+
+  # Monthly Membership
+  - FILE_ID: 20001
+    Description: MONTHLY_MBR_IN_FILE2
+    Category: MONTHLY_MBR_IN
+  - FILE_ID: 20002
+    Description: MONTHLY_MBR_IN_FILE3
+    Category: MONTHLY_MBR_IN
+  - FILE_ID: 20003
+    Description: MONTHLY_MBR_IN_FILE4
+    Category: MONTHLY_MBR_IN
+  - FILE_ID: 20004
+    Description: MONTHLY_MBR_IN_FILE5
+    Category: MONTHLY_MBR_IN
+  - FILE_ID: 20005
+    Description: MONTHLY_MBR_IN_FILE6
+    Category: MONTHLY_MBR_IN
+
+  # Labs
+  - FILE_ID: 70000
+    Description: PRIMARY LAB_IN
+    Category: LAB_IN
+  - FILE_ID: 70055
+    Description: QA PRIMARY LAB_IN
+    Category: LAB_IN
+  - FILE_ID: 17055
+    Description: QA SUPPL LAB_IN
+    Category: LAB_IN
+  - FILE_ID: 17113
+    Description: Suplemental data Laboratory results 01
+    Category: LAB_IN
+  - FILE_ID: 17000
+    Description: SUPPL_LAB_IN
+    Category: LAB_IN
+
+  # RX
+  - FILE_ID: 80055
+    Description: QA PRIMARY RX_IN
+    Category: RX_IN
+  - FILE_ID: 17555
+    Description: QA SUPPL RX_IN
+    Category: RX_IN

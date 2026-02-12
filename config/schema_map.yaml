@@ -20,6 +20,7 @@ tables:
       ssn: "MEM_SSN"
       hic: "HIC_NUMBER"
       mbi: "MBI_NUMBER"
+      file_id: "FILE_ID"
 
   # Enrollment & Benefits
   enrollment:
@@ -29,6 +30,9 @@ tables:
       start_date: "ENR_START"
       end_date: "ENR_END"
       benefit_medical: "BEN_MEDICAL"
+      benefit_med_inp: "BEN_MED_INP"
+      benefit_med_int: "BEN_MED_INT"
+      benefit_med_amb: "BEN_MED_AMB"
       benefit_rx: "BEN_RX"
       benefit_dent: "BEN_DENT"
       benefit_mh_inp: "BEN_MH_INP"
@@ -38,6 +42,7 @@ tables:
       benefit_cd_int: "BEN_CD_INT"
       benefit_cd_amb: "BEN_CD_AMB"
       benefit_cd_amp: "BEN_CD_AMP"
+      file_id: "FILE_ID"
 
   # Medical Claims / Visits
   visit:
@@ -53,6 +58,7 @@ tables:
       claim_type: "CLAIM_TY"
       provider_npi: "BILLING_PROV_NPI"
       provider_specialty: "PROV_SPEC"
+      file_id: "FILE_ID"
       # Grouped Code Fields for easier engine searching
       procedure_codes: ["CPT_1", "CPT_2", "HCPCS_1", "HCPCS_2"]
       diagnosis_codes: ["DIAG_I_1", "DIAG_I_2", "DIAG_I_3", "DIAG_I_4", "DIAG_I_5"] # Can expand if needed
@@ -71,6 +77,7 @@ tables:
       loinc: "LOINC"
       snomed: ["SNOMED_1", "SNOMED_2"]
       result_value: "RESULT"
+      file_id: "FILE_ID"
 
   # Monthly Membership Flags (Hospice, LIS)
   monthly_membership:
@@ -79,6 +86,7 @@ tables:
     fields:
       run_date: "RUN_DT"
       hospice_flag: "HOSPICE"
+      file_id: "FILE_ID"
 
   # Pharmacy Claims
   rx:
@@ -96,6 +104,7 @@ tables:
       prov_npi: "PROV_NPI"
       pharm_npi: "PHARM_NPI"
       product_id: "PRODUCT_ID"
+      file_id: "FILE_ID"
 
   # Laboratory Results
   lab:
@@ -106,5 +115,6 @@ tables:
       loinc: "LOINC"
       cpt: "LAB_CPT"
       value: "LAB_VALUE"
+      file_id: "FILE_ID"
 
 # Benefit profiles moved to config/benefits.yaml
